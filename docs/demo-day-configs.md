@@ -17,10 +17,35 @@ Proven live on remote TX `t11` → local mic:
 
 Physical cal sweep (`output/calibration-audible-physical`, PHYSICAL_RX) peaked near **3750 Hz** and recommends **2000/3750** as MOST_RELIABLE under that sweep. Prefer the **proven live** 3500/7500 pair for stage reliability.
 
-### Commands
+### Fast audible (speed demo)
+
+Measured on the same remote-TX → local-mic path with payload `DEMO_DEMO_334` (PHYSICAL_RX):
+
+| Tsym | Carriers | Repeats | TX ≈ | Live trials |
+|------|----------|---------|------|-------------|
+| **0.07 s** | 3000 / 8000 Hz | 1 | ~11.8 s | **3/3 CRC VALID** ← recommended fast |
+| 0.08 s | 3000 / 8000 Hz | 1 | ~13.4 s | 2/2 (+ earlier single OK) |
+| 0.04 s | 3000 / 8000 Hz | 1 | ~6.7 s | 2/3 (aggressive / flaky) |
+| 0.05–0.06 s | 3000 / 8000 Hz | 1 | — | CRC failures in first sweep |
 
 ```bash
-# Live monitor — UI live; CRC decode after capture (~47s for DEMO×2)
+# Fast path (~12 s airtime for DEMO_DEMO_334)
+python -m src.live_monitor --remote-tx nkn@192.168.68.109 \
+  --remote-output-device 1 --message DEMO_DEMO_334 --modulation cpfsk \
+  --symbol-duration 0.07 --frequency-zero 3000 --frequency-one 8000 \
+  --repeats 1 --amplitude 0.30
+
+# Aggressive (~7 s) — expect occasional CRC fail
+python -m src.live_monitor --remote-tx nkn@192.168.68.109 \
+  --remote-output-device 1 --message DEMO_DEMO_334 --modulation cpfsk \
+  --symbol-duration 0.04 --frequency-zero 3000 --frequency-one 8000 \
+  --repeats 1 --amplitude 0.30
+```
+
+### Commands (reliable default)
+
+```bash
+# Live monitor — UI live; CRC decode after capture (~47s for DEMO-LAB-2027 ×2 @ 0.12s)
 python -m src.live_monitor --remote-tx nkn@192.168.68.109 \
   --remote-output-device 1 --message DEMO-LAB-2027 --modulation cpfsk
 
@@ -62,3 +87,4 @@ python -m src.live_monitor --near-ultrasonic \
 
 - Remote audible CPFSK: `experiments/20260730T190041-remote-t11-tx-local-rx/` → **8/10**
 - Remote + Hamming: `experiments/20260730T192412-remote-cpfsk-hamming74/` → **4/4**
+- Fast `DEMO_DEMO_334` @ 0.07 s / 3–8 kHz → **3/3** (see table above)

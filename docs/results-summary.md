@@ -1,6 +1,7 @@
 # Results summary
 
-Exact git commit at last physical campaign: `f73d7cb3d9f0fa69fdd5a2d7bfaf98aebca4db00` (working tree may contain newer uncommitted upgrades).
+Docs and code for the conference upgrade live on `main` (see `git log -5 --oneline`).
+Physical speed notes below refer to remote TX `t11` → local mic captures labelled **PHYSICAL_RX**.
 
 ## Scope
 
@@ -75,6 +76,19 @@ Provenance: **PHYSICAL_RX**
 | Payload | HELLO |
 | Trials | 4 |
 | Frame success | **4/4 (100%)** |
+
+## Physical campaign D — fast audible `DEMO_DEMO_334`
+
+Provenance: **PHYSICAL_RX** (remote `t11` TX → local mic). Modulation CPFSK, carriers 3000/8000 Hz, repeats=1.
+
+| Tsym | Approx TX | Result |
+|------|-----------|--------|
+| 0.07 s | ~11.8 s | **3/3 CRC VALID** (recommended fast demo) |
+| 0.08 s | ~13.4 s | 2/2 CRC VALID |
+| 0.04 s | ~6.7 s | 2/3 CRC VALID (aggressive) |
+| 0.05–0.06 s | — | CRC failures in initial sweep |
+
+See `docs/demo-day-configs.md` for exact commands.
 
 ## Simulation
 

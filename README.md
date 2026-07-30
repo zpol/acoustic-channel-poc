@@ -21,8 +21,15 @@ Physical results are labelled **PHYSICAL_RX** and curated under `output/samples/
 ### Quick demo (audible, remote TX)
 
 ```bash
+# Reliable default (~0.12s symbols, 2 repeats)
 python -m src.live_monitor --remote-tx nkn@192.168.68.109 \
   --remote-output-device 1 --message DEMO-LAB-2027 --modulation cpfsk
+
+# Fast demo (~0.07s, ~12s airtime for DEMO_DEMO_334)
+python -m src.live_monitor --remote-tx nkn@192.168.68.109 \
+  --remote-output-device 1 --message DEMO_DEMO_334 --modulation cpfsk \
+  --symbol-duration 0.07 --frequency-zero 3000 --frequency-one 8000 \
+  --repeats 1 --amplitude 0.30
 ```
 
 ### Physical calibration
