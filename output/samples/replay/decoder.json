@@ -1,0 +1,12 @@
+{
+  "provenance": "PHYSICAL_RX",
+  "tx": "remote-t11",
+  "message": "HELLO",
+  "success": true,
+  "recovered": "HELLO",
+  "ber": 0.0,
+  "error": null,
+  "modulation": "cpfsk",
+  "rms": 0.07816392989799895,
+  "peak": 1.0
+}

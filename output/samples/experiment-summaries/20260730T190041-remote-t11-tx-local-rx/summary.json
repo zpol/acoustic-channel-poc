@@ -1,0 +1,81 @@
+{
+  "provenance": "PHYSICAL_RX",
+  "setup": "remote-t11-tx-local-rx",
+  "modulation": "cpfsk",
+  "n_trials": 10,
+  "n_ok": 8,
+  "success_rate": 0.8,
+  "trials": [
+    {
+      "trial": 1,
+      "message": "HELLO",
+      "success": true,
+      "ber": 0.0,
+      "error": null
+    },
+    {
+      "trial": 2,
+      "message": "HELLO",
+      "success": true,
+      "ber": 0.0,
+      "error": null
+    },
+    {
+      "trial": 3,
+      "message": "HELLO",
+      "success": false,
+      "ber": 0.009615384615384616,
+      "error": "CRC mismatch: received 0x5274, expected 0x5059"
+    },
+    {
+      "trial": 4,
+      "message": "HELLO",
+      "success": true,
+      "ber": 0.0,
+      "error": null
+    },
+    {
+      "trial": 5,
+      "message": "DEMO-LAB-2027",
+      "success": false,
+      "ber": 0.017857142857142856,
+      "error": "CRC mismatch: received 0xD82E, expected 0x2640"
+    },
+    {
+      "trial": 6,
+      "message": "DEMO-LAB-2027",
+      "success": true,
+      "ber": 0.0,
+      "error": null
+    },
+    {
+      "trial": 7,
+      "message": "DEMO-LAB-2027",
+      "success": true,
+      "ber": 0.0,
+      "error": null
+    },
+    {
+      "trial": 8,
+      "message": "ACOUSTIC-CHANNEL",
+      "success": true,
+      "ber": 0.0,
+      "error": null
+    },
+    {
+      "trial": 9,
+      "message": "ACOUSTIC-CHANNEL",
+      "success": true,
+      "ber": 0.0,
+      "error": null
+    },
+    {
+      "trial": 10,
+      "message": "ACOUSTIC-CHANNEL",
+      "success": true,
+      "ber": 0.0,
+      "error": null
+    }
+  ],
+  "git_commit": "f73d7cb3d9f0fa69fdd5a2d7bfaf98aebca4db00"
+}

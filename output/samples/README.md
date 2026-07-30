@@ -1,15 +1,20 @@
-# Curated demo samples (no live captures)
+# Curated demo samples
 
-All payloads use synthetic messages such as `DEMO-LAB-2027` or `HELLO`.
-Nothing in this folder contains the substring `POL`.
+Payloads are synthetic (`DEMO-LAB-2027`, `HELLO`, …). Nothing contains `POL`.
 
-| File prefix | Meaning |
+## Provenance
+
+| Path | Provenance |
 | --- | --- |
-| `fast_120ms_*` | Default/fast profile (3.5/7.5 kHz, 120 ms) |
-| `reliable_200ms_*` | High-reliability profile (4/6 kHz, 200 ms) |
-| `turbo_80ms_*` | Experimental faster profile (3/8 kHz, 80 ms) |
-| `near_us_HELLO_*` | Near-ultrasonic dry-run (18.5/19.5 kHz) |
-| `calibration_*.png` | Frequency-response calibration plots |
-| `demo_*` | Canonical demo TX artefacts |
+| `fast_*`, `reliable_*`, `turbo_*`, `demo_*`, `near_us_*` | GENERATED_TX / SIMULATED_RX |
+| `calibration-audible-physical/` | **PHYSICAL_RX** (2–10 kHz sweep) |
+| `calibration-near-us-physical/` | **PHYSICAL_RX** (15–21 kHz sweep) |
+| `replay/` | **PHYSICAL_RX** (remote TX → local mic, HELLO, CRC valid) |
+| `experiment-summaries/` | Summaries of PHYSICAL_RX / SIMULATED campaigns |
 
-`*_rx_sim.wav` files are **simulated** microphone captures (noise + timing offset), not live room recordings.
+`*_rx_sim.wav` files are **simulated** microphone captures, not live room recordings.
+
+## Demo-day
+
+See `docs/demo-day-configs.md`. Primary live path: audible **3500/7500 Hz**, CPFSK, 0.12 s.
+Near-US is educational on this hardware (weak measured detector SNR).

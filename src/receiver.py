@@ -40,12 +40,15 @@ from src.modulation import (
 )
 from src.cli_common import add_profile_argument, apply_profile
 from src.protocol import (
+    FEC_MODES,
+    FEC_NONE,
     PREAMBLE_AND_SYNC,
     DecodeResult,
     decode_bits,
     encode_message,
     validate_payload,
 )
+from src.synchronization import find_sync_correlation
 from src.visualizer import (
     save_bit_timeline,
     save_energy_over_time,
@@ -74,6 +77,8 @@ class QualityStats:
     preamble_found: bool = False
     timing_offset_samples: int = 0
     preamble_score: int = 0
+    fec_corrected_bits: int = 0
+    sync_state: str = "NO_SIGNAL"
 
 
 @dataclass
@@ -207,6 +212,30 @@ def build_parser() -> argparse.ArgumentParser:
         help="TX amplitude used when synthesizing in --simulate",
     )
     parser.add_argument("--seed", type=int, default=42, help="RNG seed for simulate")
+    parser.add_argument(
+        "--fec",
+        choices=FEC_MODES,
+        default=FEC_NONE,
+        help="Must match transmitter FEC mode",
+    )
+    parser.add_argument(
+        "--sync-mode",
+        choices=("legacy", "correlation"),
+        default="legacy",
+        help="Preamble sync: exact match (legacy) or Hamming-tolerant correlation",
+    )
+    parser.add_argument(
+        "--frequency-search-hz",
+        type=float,
+        default=0.0,
+        help="Search ±Hz around each carrier (0 disables)",
+    )
+    parser.add_argument(
+        "--frequency-search-step-hz",
+        type=float,
+        default=10.0,
+        help="Step size for carrier neighbourhood search",
+    )
     return parser
 
 
@@ -281,6 +310,7 @@ def _find_all_preambles(bits: Sequence[int]) -> List[int]:
 def _majority_vote_decode(
     soft_bits: Sequence[int],
     decisions: Sequence[SymbolDecision],
+    fec: str = FEC_NONE,
 ) -> DecodeResult:
     """Majority-vote across repeated preamble-aligned frame copies."""
     hits = _find_all_preambles(list(soft_bits))
@@ -294,19 +324,23 @@ def _majority_vote_decode(
         if len(header) < 16:
             continue
         try:
-            from src.protocol import bits_to_bytes
+            from src.protocol import bits_to_bytes, frame_bit_count
 
             length = bits_to_bytes(header[8:16])[0]
         except Exception:
             continue
         if length < 1 or length > 32:
             continue
-        frame_bits = len(PREAMBLE_AND_SYNC) + 16 + length * 8 + 16
+        # For FEC body the on-wire length differs; take a generous window
+        try:
+            frame_bits = frame_bit_count(length, fec=fec)
+        except Exception:
+            frame_bits = len(PREAMBLE_AND_SYNC) + 16 + length * 8 + 16
         chunk = list(soft_bits[h : h + frame_bits])
-        if len(chunk) != frame_bits:
+        if len(chunk) < frame_bits // 2:
             continue
         # Require reasonable energy on the copy
-        region = decisions[h : h + frame_bits]
+        region = decisions[h : h + min(len(chunk), len(decisions) - h)]
         if region:
             mean_e = float(
                 np.mean([max(d.energy_zero, d.energy_one) for d in region])
@@ -329,7 +363,7 @@ def _majority_vote_decode(
     for i in range(target_len):
         ones = sum(f[i] for f in frames)
         voted.append(1 if ones * 2 >= len(frames) else 0)
-    return decode_bits(voted)
+    return decode_bits(voted, fec=fec)
 
 
 def _try_decode_candidates(
@@ -337,9 +371,11 @@ def _try_decode_candidates(
     soft_bits: Sequence[int],
     decisions: Sequence[SymbolDecision],
     min_preamble_confidence: float = 0.15,
+    fec: str = FEC_NONE,
+    sync_mode: str = "legacy",
 ) -> DecodeResult:
     """Decode using hard bits first; soft bits / majority vote to repair."""
-    hard_result = decode_bits(hard_bits)
+    hard_result = decode_bits(hard_bits, fec=fec)
     if hard_result.success:
         return hard_result
 
@@ -348,14 +384,27 @@ def _try_decode_candidates(
         data_start = hard_result.sync_offset
         preamble_start = data_start - len(PREAMBLE_AND_SYNC)
         if preamble_start >= 0:
-            soft_result = decode_bits(soft_bits[preamble_start:])
+            soft_result = decode_bits(soft_bits[preamble_start:], fec=fec)
             if soft_result.success:
                 return soft_result
+
+    # Correlation sync with Hamming tolerance
+    if sync_mode == "correlation":
+        sync = find_sync_correlation(soft_bits, max_hamming=2)
+        if sync.best is not None:
+            cand = decode_bits(soft_bits[sync.best.bit_index :], fec=fec)
+            if cand.success:
+                return cand
+            # Also try hard bits at same index
+            if sync.best.bit_index < len(hard_bits):
+                cand_h = decode_bits(hard_bits[sync.best.bit_index :], fec=fec)
+                if cand_h.success:
+                    return cand_h
 
     # Explicit hard preamble hits (repeated frames)
     for idx in _find_all_preambles(list(hard_bits)):
         for stream in (hard_bits[idx:], soft_bits[idx:]):
-            result = decode_bits(stream)
+            result = decode_bits(stream, fec=fec)
             if result.success:
                 return result
 
@@ -370,12 +419,12 @@ def _try_decode_candidates(
         )
         if mean_conf < min_preamble_confidence and mean_energy < 1e-3:
             continue
-        result = decode_bits(soft_bits[idx:])
+        result = decode_bits(soft_bits[idx:], fec=fec)
         if result.success:
             return result
 
     # Majority vote across repeated copies (best effort)
-    voted = _majority_vote_decode(soft_bits, decisions)
+    voted = _majority_vote_decode(soft_bits, decisions, fec=fec)
     if voted.success:
         return voted
 
@@ -393,6 +442,10 @@ def decode_from_samples(
     status: Optional[LiveStatus] = None,
     timing_search: bool = True,
     timing_steps: int = 24,
+    fec: str = FEC_NONE,
+    sync_mode: str = "legacy",
+    frequency_search_hz: float = 0.0,
+    frequency_search_step_hz: float = 10.0,
 ) -> Tuple[QualityStats, List[SymbolDecision], DecodeResult]:
     """Full demodulation + protocol decode pipeline with timing recovery."""
     stats = QualityStats()
@@ -421,6 +474,8 @@ def decode_from_samples(
             min_ratio=min_ratio,
             apply_bandpass=apply_bandpass,
             n_steps=timing_steps,
+            frequency_search_hz=frequency_search_hz,
+            frequency_search_step_hz=frequency_search_step_hz,
         )
         stats.timing_offset_samples = offset
         stats.preamble_score = preamble_score
@@ -431,6 +486,8 @@ def decode_from_samples(
             min_energy=effective_min_energy,
             min_ratio=min_ratio,
             apply_bandpass=apply_bandpass,
+            frequency_search_hz=frequency_search_hz,
+            frequency_search_step_hz=frequency_search_step_hz,
         )
         stats.timing_offset_samples = 0
         stats.preamble_score = 0
@@ -464,6 +521,14 @@ def decode_from_samples(
         soft_hits = _find_all_preambles(soft)
         if soft_hits:
             found, idx = True, soft_hits[0]
+    if sync_mode == "correlation":
+        sync = find_sync_correlation(soft)
+        stats.sync_state = sync.state
+        if sync.best is not None:
+            found = True
+            idx = sync.best.bit_index
+    else:
+        stats.sync_state = "SYNCED" if found else "NO_SIGNAL"
 
     stats.preamble_found = found
     if status is not None:
@@ -489,7 +554,9 @@ def decode_from_samples(
                 status.current_frequency = "uncertain"
 
     hard = _certain_bits(bits_opt)
-    result = _try_decode_candidates(hard, soft, decisions)
+    result = _try_decode_candidates(
+        hard, soft, decisions, fec=fec, sync_mode=sync_mode
+    )
 
     # If still failing, refine around the chosen offset (± half step)
     if not result.success and timing_search:
@@ -508,9 +575,15 @@ def decode_from_samples(
                 min_ratio=min_ratio,
                 apply_bandpass=apply_bandpass,
                 timing_offset_samples=off,
+                frequency_search_hz=frequency_search_hz,
+                frequency_search_step_hz=frequency_search_step_hz,
             )
             cand = _try_decode_candidates(
-                _certain_bits(b2), soft_bits_from_decisions(d2), d2
+                _certain_bits(b2),
+                soft_bits_from_decisions(d2),
+                d2,
+                fec=fec,
+                sync_mode=sync_mode,
             )
             if cand.success:
                 result = cand
@@ -529,9 +602,11 @@ def decode_from_samples(
 
     stats.frame_success = result.success
     stats.decode_error = result.error
+    stats.fec_corrected_bits = result.fec_corrected_bits
     if result.success and result.frame is not None:
         stats.recovered_message = result.frame.payload_text
         stats.preamble_found = True
+        stats.sync_state = "CRC_VALID"
         if status is not None:
             status.crc_status = "OK"
             status.recovered_message = result.frame.payload_text
@@ -539,6 +614,8 @@ def decode_from_samples(
                 f"locked (offset {stats.timing_offset_samples} samples)"
             )
     else:
+        if result.error and "CRC" in result.error:
+            stats.sync_state = "CRC_FAILED"
         if status is not None:
             status.crc_status = result.error or "fail"
 
@@ -603,7 +680,7 @@ def record_audio(
 
 def run_simulation(args: argparse.Namespace, config: ModulationConfig) -> int:
     validate_payload(args.message)
-    expected_bits = encode_message(args.message)
+    expected_bits = encode_message(args.message, fec=args.fec)
     tx = bits_to_waveform(
         expected_bits,
         ModulationConfig(
@@ -637,6 +714,10 @@ def run_simulation(args: argparse.Namespace, config: ModulationConfig) -> int:
             noise_threshold=args.noise_threshold,
             expected_bits=expected_bits,
             status=status,
+            fec=args.fec,
+            sync_mode=args.sync_mode,
+            frequency_search_hz=args.frequency_search_hz,
+            frequency_search_step_hz=args.frequency_search_step_hz,
         )
         for i, d in enumerate(decisions[:: max(1, len(decisions) // 20)]):
             status.bits_collected = min(len(decisions), (i + 1) * 20)
@@ -729,6 +810,10 @@ def run_live(args: argparse.Namespace, config: ModulationConfig) -> int:
             apply_bandpass=args.bandpass,
             noise_threshold=args.noise_threshold,
             status=status,
+            fec=args.fec,
+            sync_mode=args.sync_mode,
+            frequency_search_hz=args.frequency_search_hz,
+            frequency_search_step_hz=args.frequency_search_step_hz,
         )
         time.sleep(0.3)
 

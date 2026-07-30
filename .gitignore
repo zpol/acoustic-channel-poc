@@ -17,3 +17,7 @@ output/*
 dist/
 build/
 .DS_Store
+
+# Raw physical dumps (curated copies live under output/samples/)
+experiments/*
+!experiments/.gitkeep

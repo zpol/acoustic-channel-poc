@@ -1,0 +1,11 @@
+{
+  "provenance": "PHYSICAL_RX",
+  "tx_host": "t11 / 192.168.68.109",
+  "rx_host": "local",
+  "modulation": "cpfsk",
+  "output_device_remote": 1,
+  "frequency_zero": 3500.0,
+  "frequency_one": 7500.0,
+  "symbol_duration": 0.12,
+  "amplitude": 0.28
+}

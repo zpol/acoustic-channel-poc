@@ -4,7 +4,37 @@ Educational, **local** proof of concept that transmits a short **synthetic** tex
 
 Built for an **authorized cybersecurity conference demo** to illustrate that an acoustic path can carry framed digital data — not for covert use, malware, or collecting real user information.
 
+## Upgrade features (conference-ready)
+
+* CPFSK continuous-phase modulation (`--modulation cpfsk`) alongside legacy BFSK
+* Optional Hamming(7,4) FEC (`--fec hamming74`) with CRC after FEC
+* Correlation sync (`--sync-mode correlation`) and carrier neighbourhood search
+* Hardware profile, physical calibration package, carrier recommendations
+* Experiment runner: `python -m src.experiment`
+* Stage demo / replay: `python -m src.stage_demo`
+* **Live terminal monitor:** `python -m src.live_monitor` (waveform, tone bars, bits → message)
+* Demo-day configs: `docs/demo-day-configs.md`
+* Docs: `docs/conference-runbook.md`, `docs/results-summary.md`
+
+Physical results are labelled **PHYSICAL_RX** and curated under `output/samples/` (full dumps may live locally in `experiments/`). Simulation artefacts are labelled **SIMULATED_RX**.
+
+### Quick demo (audible, remote TX)
+
+```bash
+python -m src.live_monitor --remote-tx nkn@192.168.68.109 \
+  --remote-output-device 1 --message DEMO-LAB-2027 --modulation cpfsk
+```
+
+### Physical calibration
+
+```bash
+python scripts/physical_calibration_remote.py --band both
+# → output/calibration-audible-physical
+# → output/calibration-near-us-physical
+```
+
 ## Ethical and authorized-use statement
+
 
 * Use only in a controlled lab or conference demo with explicit authorization.
 * Transmit **only** manually supplied synthetic payloads (for example `DEMO-LAB-2027`).

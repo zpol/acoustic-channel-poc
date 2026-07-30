@@ -26,6 +26,7 @@ from src.modulation import (
     HIGH_FREQ_WARNING_HZ,
     ModulationConfig,
     bits_to_waveform,
+    modulate,
 )
 from src.cli_common import add_profile_argument, apply_profile
 from src.protocol import (
@@ -91,6 +92,18 @@ def build_parser() -> argparse.ArgumentParser:
         default=1,
         choices=(1, 2, 3),
         help="Transmit the frame 1–3 times",
+    )
+    parser.add_argument(
+        "--modulation",
+        choices=("bfsk", "cpfsk"),
+        default="bfsk",
+        help="bfsk (legacy per-symbol fades) or cpfsk (continuous-phase)",
+    )
+    parser.add_argument(
+        "--fec",
+        choices=("none", "hamming74"),
+        default="none",
+        help="Optional Hamming(7,4) on frame body after preamble+sync",
     )
     parser.add_argument(
         "--inter-frame-silence",
@@ -199,11 +212,14 @@ def generate_signal(
     config: ModulationConfig,
     repeats: int = 1,
     inter_frame_silence: float = 0.25,
+    modulation: str = "bfsk",
+    fec: str = "none",
 ) -> np.ndarray:
-    bits = encode_message(message)
-    return bits_to_waveform(
+    bits = encode_message(message, fec=fec)
+    return modulate(
         bits,
         config,
+        modulation=modulation,
         inter_frame_silence=inter_frame_silence,
         repeats=repeats,
     )
@@ -249,14 +265,17 @@ def main(argv: Optional[List[str]] = None) -> int:
         args.symbol_duration,
         repeats=args.repeats,
         inter_frame_silence=args.inter_frame_silence,
+        fec=args.fec,
     )
-    n_bits = frame_bit_count(len(args.message.encode("utf-8")))
+    n_bits = frame_bit_count(len(args.message.encode("utf-8")), fec=args.fec)
     log_config(
         config,
         args.message,
         repeats=args.repeats,
         inter_frame_silence=args.inter_frame_silence,
         dry_run=args.dry_run,
+        modulation=args.modulation,
+        fec=args.fec,
         bits_per_frame=n_bits,
         expected_duration_s=f"{duration:.2f}",
     )
@@ -272,6 +291,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             config,
             repeats=args.repeats,
             inter_frame_silence=args.inter_frame_silence,
+            modulation=args.modulation,
+            fec=args.fec,
         )
     except Exception as exc:
         console.print(f"[red]Modulation error:[/red] {exc}")

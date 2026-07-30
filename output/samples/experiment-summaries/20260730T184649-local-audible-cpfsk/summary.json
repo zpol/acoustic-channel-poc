@@ -1,0 +1,85 @@
+{
+  "provenance": "PHYSICAL_RX",
+  "git_commit": "f73d7cb3d9f0fa69fdd5a2d7bfaf98aebca4db00",
+  "modulation": "cpfsk",
+  "n_trials": 10,
+  "n_ok": 6,
+  "success_rate": 0.6,
+  "trials": [
+    {
+      "trial": 1,
+      "message": "HELLO",
+      "success": false,
+      "ber": 0.009615384615384616,
+      "error": "CRC mismatch: received 0x5274, expected 0xBF1C"
+    },
+    {
+      "trial": 2,
+      "message": "HELLO",
+      "success": true,
+      "ber": 0.0,
+      "error": null
+    },
+    {
+      "trial": 3,
+      "message": "HELLO",
+      "success": true,
+      "ber": 0.0,
+      "error": null
+    },
+    {
+      "trial": 4,
+      "message": "HELLO",
+      "success": true,
+      "ber": 0.0,
+      "error": null
+    },
+    {
+      "trial": 5,
+      "message": "HELLO",
+      "success": true,
+      "ber": 0.009615384615384616,
+      "error": null
+    },
+    {
+      "trial": 6,
+      "message": "DEMO-LAB-2027",
+      "success": true,
+      "ber": 0.005952380952380952,
+      "error": null
+    },
+    {
+      "trial": 7,
+      "message": "DEMO-LAB-2027",
+      "success": false,
+      "ber": 0.02976190476190476,
+      "error": "CRC mismatch: received 0x37D8, expected 0x71D5"
+    },
+    {
+      "trial": 8,
+      "message": "DEMO-LAB-2027",
+      "success": true,
+      "ber": 0.005952380952380952,
+      "error": null
+    },
+    {
+      "trial": 9,
+      "message": "ACOUSTIC-CHANNEL",
+      "success": false,
+      "ber": 0.08333333333333333,
+      "error": "CRC mismatch: received 0x5178, expected 0x09F9"
+    },
+    {
+      "trial": 10,
+      "message": "ACOUSTIC-CHANNEL",
+      "success": false,
+      "ber": 0.015625,
+      "error": "CRC mismatch: received 0x3578, expected 0xDB8D"
+    }
+  ],
+  "latency": {
+    "detected": false,
+    "seconds": 0.05508333333333333,
+    "confidence": 1.0
+  }
+}

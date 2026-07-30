@@ -1,0 +1,61 @@
+{
+  "n_trials": 4,
+  "n_ok": 4,
+  "success_rate": 1.0,
+  "trials": [
+    {
+      "trial": 1,
+      "provenance": "PHYSICAL_RX",
+      "message": "HELLO",
+      "success": true,
+      "recovered": "HELLO",
+      "ber": 0.0,
+      "error": null,
+      "fec_corrected_bits": 2,
+      "sync_state": "CRC_VALID",
+      "snr_estimate_db": 67.10407067375824,
+      "clipping": true
+    },
+    {
+      "trial": 2,
+      "provenance": "PHYSICAL_RX",
+      "message": "HELLO",
+      "success": true,
+      "recovered": "HELLO",
+      "ber": 0.0,
+      "error": null,
+      "fec_corrected_bits": 0,
+      "sync_state": "CRC_VALID",
+      "snr_estimate_db": 71.82013257630662,
+      "clipping": true
+    },
+    {
+      "trial": 3,
+      "provenance": "PHYSICAL_RX",
+      "message": "HELLO",
+      "success": true,
+      "recovered": "HELLO",
+      "ber": 0.0,
+      "error": null,
+      "fec_corrected_bits": 20,
+      "sync_state": "CRC_VALID",
+      "snr_estimate_db": 71.18663227330583,
+      "clipping": true
+    },
+    {
+      "trial": 4,
+      "provenance": "PHYSICAL_RX",
+      "message": "HELLO",
+      "success": true,
+      "recovered": "HELLO",
+      "ber": 0.0,
+      "error": null,
+      "fec_corrected_bits": 7,
+      "sync_state": "CRC_VALID",
+      "snr_estimate_db": 73.00070251049877,
+      "clipping": true
+    }
+  ],
+  "git_commit": "f73d7cb3d9f0fa69fdd5a2d7bfaf98aebca4db00",
+  "provenance": "PHYSICAL_RX"
+}

@@ -7,9 +7,12 @@ and recommends two BFSK frequencies with good separation.
 from __future__ import annotations
 
 import argparse
+import csv
+import json
+import subprocess
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
@@ -17,12 +20,20 @@ import numpy as np
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from scipy.io import wavfile
 
 from src.modulation import (
     DEFAULT_SAMPLE_RATE,
     HIGH_FREQ_WARNING_HZ,
     generate_tone,
     goertzel,
+)
+from src.carrier_recommend import FreqPoint, recommend_carrier_pairs, recommendations_as_dict
+from src.provenance import Provenance
+from src.synchronization import (
+    align_recording,
+    estimate_latency,
+    generate_sync_pilot,
 )
 from src.visualizer import save_frequency_response
 
@@ -35,15 +46,19 @@ class CalibrationPoint:
     energy: float
     noise_floor: float
     snr_db: float
+    adjacent_energy: float = 0.0
+    estimated_detector_snr_db: float = 0.0
+    clipping: bool = False
+    harmonic_energy: float = 0.0
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m src.calibration",
         description=(
-            "Calibrate speaker/mic frequency response for BFSK. "
+            "Calibrate speaker/mic frequency response for BFSK/CPFSK. "
             "Default sweep is audible 2–10 kHz. Near-ultrasonic requires "
-            "--near-ultrasonic."
+            "--near-ultrasonic. Use --physical for packaged evidence."
         ),
     )
     parser.add_argument("--input-device", type=int, default=None)
@@ -54,8 +69,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Use 16–22 kHz sweep (experimental; requires confirmation)",
     )
+    parser.add_argument("--physical", action="store_true", help="Save full calibration package")
     parser.add_argument("--f-start", type=float, default=None)
     parser.add_argument("--f-stop", type=float, default=None)
+    parser.add_argument("--start-frequency", type=float, default=None, dest="start_frequency")
+    parser.add_argument("--end-frequency", type=float, default=None, dest="end_frequency")
     parser.add_argument(
         "--step",
         type=float,
@@ -90,6 +108,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("output/calibration_response.png"),
         help="Path for frequency-response PNG",
+    )
+    parser.add_argument(
+        "--out-dir",
+        type=Path,
+        default=Path("output/calibration"),
+        help="Package directory when --physical is set",
     )
     parser.add_argument(
         "--min-separation",
@@ -152,6 +176,13 @@ def measure_response(
         if len(window) < 16:
             window = recording[start:end]
         energy = goertzel(window, freq, sample_rate)
+        # Adjacent band (±500 Hz) for selectivity estimate
+        adj = 0.5 * (
+            goertzel(window, max(50.0, freq - 500.0), sample_rate)
+            + goertzel(window, freq + 500.0, sample_rate)
+        )
+        harm = goertzel(window, min(freq * 2.0, sample_rate / 2 - 100), sample_rate)
+        peak = float(np.max(np.abs(window))) if len(window) else 0.0
         snr = 10.0 * np.log10((energy + 1e-20) / (noise_floor + 1e-20))
         points.append(
             CalibrationPoint(
@@ -159,6 +190,10 @@ def measure_response(
                 energy=energy,
                 noise_floor=noise_floor,
                 snr_db=float(snr),
+                adjacent_energy=float(adj),
+                estimated_detector_snr_db=float(snr),
+                clipping=peak >= 0.99,
+                harmonic_energy=float(harm),
             )
         )
     return points
@@ -269,8 +304,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     f_start_def, f_stop_def, step_def = default_range(args.near_ultrasonic)
-    f_start = args.f_start if args.f_start is not None else f_start_def
-    f_stop = args.f_stop if args.f_stop is not None else f_stop_def
+    f_start = (
+        args.start_frequency
+        if args.start_frequency is not None
+        else (args.f_start if args.f_start is not None else f_start_def)
+    )
+    f_stop = (
+        args.end_frequency
+        if args.end_frequency is not None
+        else (args.f_stop if args.f_stop is not None else f_stop_def)
+    )
     step = args.step if args.step is not None else step_def
 
     if (f_start > HIGH_FREQ_WARNING_HZ or f_stop > HIGH_FREQ_WARNING_HZ) and not (
@@ -311,6 +354,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 2
 
     frequencies = list(np.arange(f_start, f_stop + step * 0.5, step))
+    provenance = (
+        Provenance.SIMULATED_RX.value if args.dry_run else Provenance.PHYSICAL_RX.value
+    )
     console.print("[bold]Active calibration configuration[/bold]")
     console.print(f"  sample_rate = {args.sample_rate}")
     console.print(f"  range       = {f_start:.0f}–{f_stop:.0f} Hz")
@@ -318,7 +364,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     console.print(f"  n_tones     = {len(frequencies)}")
     console.print(f"  amplitude   = {args.amplitude}")
     console.print(f"  dry_run     = {args.dry_run}")
+    console.print(f"  provenance  = {provenance}")
 
+    pilot = generate_sync_pilot(args.sample_rate, duration=0.05, amplitude=args.amplitude)
     waveform, segments = build_sweep_waveform(
         frequencies,
         args.sample_rate,
@@ -326,21 +374,43 @@ def main(argv: Optional[List[str]] = None) -> int:
         args.gap,
         args.amplitude,
     )
-    duration = len(waveform) / args.sample_rate
-    console.print(f"Sweep duration: {duration:.2f} s")
+    # Prepend silence (ambient) + pilot + silence before sweep
+    ambient_n = int(0.5 * args.sample_rate)
+    pad = int(0.15 * args.sample_rate)
+    tx_full = np.concatenate(
+        [
+            np.zeros(ambient_n),
+            pilot,
+            np.zeros(pad),
+            waveform,
+        ]
+    )
+    # Shift segment indices to account for ambient+pilot+pad
+    offset = ambient_n + len(pilot) + pad
+    segments = [(s + offset, e + offset, f) for s, e, f in segments]
+    duration = len(tx_full) / args.sample_rate
+    console.print(f"Sweep duration (with pilot): {duration:.2f} s")
+
+    latency_info = {
+        "detected": False,
+        "latency_seconds": None,
+        "confidence": 0.0,
+        "correlation_peak": 0.0,
+    }
 
     if args.dry_run:
-        # Synthetic band-limited response for offline demos/tests
         rng = np.random.default_rng(0)
-        recording = waveform * 0.4 + rng.normal(0, 0.01, size=waveform.shape)
-        # Simulate roll-off above 16 kHz
+        recording = tx_full * 0.4 + rng.normal(0, 0.01, size=tx_full.shape)
         for start, end, freq in segments:
             if freq > 16_000:
                 recording[start:end] *= max(0.05, 1.0 - (freq - 16_000) / 8_000)
+        # Synthetic latency
+        delay = int(0.04 * args.sample_rate)
+        recording = np.concatenate([np.zeros(delay), recording[:-delay]])
     else:
         try:
             recording = play_and_record(
-                waveform,
+                tx_full,
                 args.sample_rate,
                 args.input_device,
                 args.output_device,
@@ -352,41 +422,184 @@ def main(argv: Optional[List[str]] = None) -> int:
             )
             return 1
 
+    lat = estimate_latency(pilot, recording[ambient_n:], args.sample_rate)
+    latency_info = {
+        "detected": lat.detected,
+        "latency_seconds": lat.latency_seconds,
+        "latency_samples": lat.latency_samples,
+        "confidence": lat.confidence,
+        "correlation_peak": lat.correlation_peak,
+    }
+    console.print(
+        f"Latency: detected={lat.detected} "
+        f"s={lat.latency_seconds:.4f} conf={lat.confidence:.3f}"
+    )
+    if lat.detected:
+        # Align so ambient starts at 0 relative to tx_full timing
+        recording = align_recording(recording, lat)
+    elif not args.dry_run:
+        console.print(
+            "[yellow]Pilot not detected with confidence — "
+            "keeping raw alignment (not fabricating).[/yellow]"
+        )
+
     mid = frequencies[len(frequencies) // 2]
     noise = estimate_noise_from_gaps(
         recording, segments, args.sample_rate, probe_freq=mid
     )
-    # Align recording length with waveform if padded
+    # Ambient noise from first half-second
+    ambient = recording[: min(len(recording), ambient_n)]
+    ambient_rms = float(np.sqrt(np.mean(ambient**2))) if len(ambient) else 0.0
+
     if len(recording) < segments[-1][1]:
         console.print("[yellow]Recording shorter than expected sweep.[/yellow]")
 
     points = measure_response(recording, segments, args.sample_rate, noise)
     print_table(points)
 
-    recommended = recommend_frequencies(points, args.min_separation)
-    if recommended:
-        console.print(
-            f"[green]Recommended BFSK pair:[/green] "
-            f"{recommended[0]:.0f} Hz / {recommended[1]:.0f} Hz"
+    freq_points = [
+        FreqPoint(
+            frequency=p.frequency,
+            estimated_detector_snr_db=p.estimated_detector_snr_db,
+            energy=p.energy,
         )
+        for p in points
+    ]
+    recs = recommend_carrier_pairs(
+        freq_points,
+        sample_rate=args.sample_rate,
+        min_separation_hz=args.min_separation,
+    )
+    for r in recs:
         console.print(
-            "Example:\n"
-            f"  python -m src.transmitter --message DEMO-LAB-2027 "
-            f"--frequency-zero {recommended[0]:.0f} "
-            f"--frequency-one {recommended[1]:.0f}"
-            + (" --near-ultrasonic" if args.near_ultrasonic else "")
+            f"[green]{r.label}:[/green] f0={r.frequency_zero:.0f} "
+            f"f1={r.frequency_one:.0f} "
+            f"estimated_detector_snr_db={r.estimated_snr_db:.1f} "
+            f"symbol_duration={r.recommended_symbol_duration:.3f}s"
         )
-    else:
-        console.print("[yellow]Could not recommend a frequency pair.[/yellow]")
+        console.print(f"  notes: {r.notes}")
+
+    recommended = (
+        (recs[0].frequency_zero, recs[0].frequency_one) if recs else None
+    )
+    if not recommended:
+        recommended = recommend_frequencies(points, args.min_separation)
+        if recommended:
+            console.print(
+                f"[green]Fallback pair:[/green] "
+                f"{recommended[0]:.0f} / {recommended[1]:.0f} Hz"
+            )
+
+    plot_path = args.plot
+    if args.physical or args.dry_run:
+        out_dir = args.out_dir
+        out_dir.mkdir(parents=True, exist_ok=True)
+        plot_path = out_dir / "response.png"
+        try:
+            commit = (
+                subprocess.check_output(
+                    ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
+                )
+                .decode()
+                .strip()
+            )
+        except Exception:
+            commit = "unknown"
+        meta = {
+            "provenance": provenance,
+            "git_commit": commit,
+            "sample_rate": args.sample_rate,
+            "f_start": f_start,
+            "f_stop": f_stop,
+            "step": step,
+            "amplitude": args.amplitude,
+            "dry_run": args.dry_run,
+            "latency": latency_info,
+            "ambient_rms": ambient_rms,
+            "noise_floor_goertzel": noise,
+            "recommendations": recommendations_as_dict(recs),
+            "snr_note": (
+                "estimated_detector_snr_db is Goertzel tone energy vs gap noise; "
+                "not calibrated acoustic SPL"
+            ),
+        }
+        (out_dir / "metadata.json").write_text(json.dumps(meta, indent=2))
+        with (out_dir / "measurements.csv").open("w", newline="") as fh:
+            w = csv.DictWriter(
+                fh,
+                fieldnames=[
+                    "frequency",
+                    "energy",
+                    "noise_floor",
+                    "estimated_detector_snr_db",
+                    "adjacent_energy",
+                    "harmonic_energy",
+                    "clipping",
+                ],
+            )
+            w.writeheader()
+            for p in points:
+                w.writerow(
+                    {
+                        "frequency": p.frequency,
+                        "energy": p.energy,
+                        "noise_floor": p.noise_floor,
+                        "estimated_detector_snr_db": p.estimated_detector_snr_db,
+                        "adjacent_energy": p.adjacent_energy,
+                        "harmonic_energy": p.harmonic_energy,
+                        "clipping": p.clipping,
+                    }
+                )
+        wavfile.write(str(out_dir / "tx_reference.wav"), args.sample_rate, tx_full.astype(np.float32))
+        wavfile.write(
+            str(out_dir / "rx_physical.wav" if not args.dry_run else out_dir / "rx_simulated.wav"),
+            args.sample_rate,
+            recording.astype(np.float32),
+        )
+        # noise floor plot
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots(figsize=(8, 3))
+        ax.plot([p.frequency for p in points], [p.noise_floor for p in points], label="noise ref")
+        ax.plot(
+            [p.frequency for p in points],
+            [p.estimated_detector_snr_db for p in points],
+            label="estimated_detector_snr_db",
+        )
+        ax.set_title(f"Noise / SNR ({provenance})")
+        ax.legend()
+        fig.tight_layout()
+        fig.savefig(out_dir / "noise_floor.png", dpi=120)
+        plt.close(fig)
+        report = [
+            f"# Calibration report\n\n",
+            f"Provenance: **{provenance}**\n\n",
+            f"Range: {f_start:.0f}–{f_stop:.0f} Hz step {step}\n\n",
+            f"Latency detected={latency_info['detected']} "
+            f"({latency_info.get('latency_seconds')})\n\n",
+            f"Ambient RMS: {ambient_rms:.6f}\n\n",
+            "## Recommendations\n\n",
+        ]
+        for r in recs:
+            report.append(
+                f"- **{r.label}**: f0={r.frequency_zero:.0f} f1={r.frequency_one:.0f} "
+                f"SNR≈{r.estimated_snr_db:.1f} dB "
+                f"Tsym={r.recommended_symbol_duration:.3f}s\n"
+            )
+        report.append(
+            "\n`estimated_detector_snr_db` is not calibrated SPL.\n"
+        )
+        (out_dir / "report.md").write_text("".join(report))
+        console.print(f"Saved calibration package: {out_dir}")
 
     save_frequency_response(
         [p.frequency for p in points],
         [p.energy for p in points],
         noise,
-        args.plot,
+        plot_path,
         recommended=recommended,
     )
-    console.print(f"Saved frequency-response plot: {args.plot}")
+    console.print(f"Saved frequency-response plot: {plot_path}")
     return 0
 
 

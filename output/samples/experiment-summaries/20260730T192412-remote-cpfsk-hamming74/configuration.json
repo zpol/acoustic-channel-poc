@@ -1,0 +1,21 @@
+{
+  "timestamp": "20260730T192412",
+  "git_commit": "f73d7cb3d9f0fa69fdd5a2d7bfaf98aebca4db00",
+  "python": "3.12.3",
+  "platform": "linux",
+  "provenance_default": "PHYSICAL_RX",
+  "modulation": "cpfsk",
+  "fec": "hamming74",
+  "frequency_zero": 3500.0,
+  "frequency_one": 7500.0,
+  "symbol_duration": 0.12,
+  "amplitude": 0.28,
+  "payload": "HELLO",
+  "payload_length": 5,
+  "distance_cm": 30.0,
+  "orientation": "mic-facing-speaker",
+  "room_condition": "lab-quiet",
+  "input_device": 0,
+  "output_device": 0,
+  "remote_tx": "nkn@192.168.68.109"
+}

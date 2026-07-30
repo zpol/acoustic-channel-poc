@@ -1,0 +1,48 @@
+{
+  "provenance": "PHYSICAL_RX",
+  "git_commit": "f73d7cb3d9f0fa69fdd5a2d7bfaf98aebca4db00",
+  "f_start": 2000,
+  "f_stop": 10000,
+  "step": 250,
+  "amplitude": 0.15,
+  "near_ultrasonic": false,
+  "sample_rate": 48000,
+  "input_device": 0,
+  "output_device": 0,
+  "remote_tx": "nkn@192.168.68.109",
+  "latency": {
+    "detected": true,
+    "seconds": 1.5849791666666666,
+    "confidence": 1.0,
+    "correlation_peak": -0.44682931566237327
+  },
+  "ambient_rms": 0.5334981965000505,
+  "recommendations": {
+    "MOST_RELIABLE": {
+      "label": "MOST_RELIABLE",
+      "frequency_zero": 2000.0,
+      "frequency_one": 3750.0,
+      "estimated_snr_db": 4.5921428051872475,
+      "recommended_symbol_duration": 0.08,
+      "notes": "Highest combined detector SNR with separation/balance constraints"
+    },
+    "BEST_COMPROMISE": {
+      "label": "BEST_COMPROMISE",
+      "frequency_zero": 2000.0,
+      "frequency_one": 3750.0,
+      "estimated_snr_db": 4.5921428051872475,
+      "recommended_symbol_duration": 0.08,
+      "notes": "Balance of SNR and mid-band placement for demos"
+    }
+  },
+  "snr_note": "estimated_detector_snr_db is not calibrated SPL",
+  "demo_note": {
+    "audible_proven_live": {
+      "f0": 3500,
+      "f1": 7500,
+      "tsym": 0.12,
+      "modulation": "cpfsk"
+    },
+    "near_us_status": "n/a"
+  }
+}

@@ -231,11 +231,31 @@ def decide_symbol(
     min_energy: float = 1e-4,
     min_ratio: float = 1.5,
     use_center: bool = True,
+    frequency_search_hz: float = 0.0,
+    frequency_search_step_hz: float = 10.0,
 ) -> SymbolDecision:
     """Decide bit 0/1/uncertain from a symbol-sized window via Goertzel."""
     window = _center_window(samples) if use_center else samples
-    e0 = goertzel(window, config.frequency_zero, config.sample_rate)
-    e1 = goertzel(window, config.frequency_one, config.sample_rate)
+    if frequency_search_hz > 0:
+        from src.synchronization import goertzel_neighbourhood
+
+        _, e0 = goertzel_neighbourhood(
+            window,
+            config.frequency_zero,
+            config.sample_rate,
+            search_hz=frequency_search_hz,
+            step_hz=frequency_search_step_hz,
+        )
+        _, e1 = goertzel_neighbourhood(
+            window,
+            config.frequency_one,
+            config.sample_rate,
+            search_hz=frequency_search_hz,
+            step_hz=frequency_search_step_hz,
+        )
+    else:
+        e0 = goertzel(window, config.frequency_zero, config.sample_rate)
+        e1 = goertzel(window, config.frequency_one, config.sample_rate)
     stronger = max(e0, e1)
     weaker = min(e0, e1) + 1e-20
     ratio = stronger / weaker
@@ -292,6 +312,8 @@ def demodulate_bits(
     min_ratio: float = 1.5,
     apply_bandpass: bool = True,
     timing_offset_samples: int = 0,
+    frequency_search_hz: float = 0.0,
+    frequency_search_step_hz: float = 10.0,
 ) -> Tuple[List[Optional[int]], List[SymbolDecision]]:
     """Slice *samples* into symbol windows and demodulate each."""
     if apply_bandpass:
@@ -311,7 +333,12 @@ def demodulate_bits(
     for i in range(n_symbols):
         window = samples[i * sps : (i + 1) * sps]
         decision = decide_symbol(
-            window, config, min_energy=min_energy, min_ratio=min_ratio
+            window,
+            config,
+            min_energy=min_energy,
+            min_ratio=min_ratio,
+            frequency_search_hz=frequency_search_hz,
+            frequency_search_step_hz=frequency_search_step_hz,
         )
         decisions.append(decision)
         bits.append(decision.bit)
@@ -361,6 +388,8 @@ def find_best_timing_offset(
     apply_bandpass: bool = True,
     n_steps: int = 24,
     pattern: Optional[Sequence[int]] = None,
+    frequency_search_hz: float = 0.0,
+    frequency_search_step_hz: float = 10.0,
 ) -> Tuple[int, List[Optional[int]], List[SymbolDecision], int]:
     """Search symbol-phase offsets and keep the best preamble alignment.
 
@@ -390,6 +419,8 @@ def find_best_timing_offset(
             min_ratio=min_ratio,
             apply_bandpass=False,
             timing_offset_samples=offset,
+            frequency_search_hz=frequency_search_hz,
+            frequency_search_step_hz=frequency_search_step_hz,
         )
         score, idx = preamble_match_score(bits, pattern)
         remaining = len(bits) - idx if idx >= 0 else 0
@@ -480,3 +511,98 @@ def normalize_gain(
     if peak < 1e-12:
         return samples
     return (samples * (target_peak / peak)).astype(np.float64)
+
+
+def modulate_bfsk(
+    bits: Sequence[int],
+    config: ModulationConfig,
+    inter_frame_silence: float = 0.0,
+    repeats: int = 1,
+) -> np.ndarray:
+    """Legacy BFSK with per-symbol fades (backward-compatible)."""
+    return bits_to_waveform(
+        bits,
+        config,
+        inter_frame_silence=inter_frame_silence,
+        repeats=repeats,
+    )
+
+
+def modulate_cpfsk(
+    bits: Sequence[int],
+    config: ModulationConfig,
+    inter_frame_silence: float = 0.0,
+    repeats: int = 1,
+    frame_fade_ms: float = 5.0,
+) -> np.ndarray:
+    """Continuous-phase FSK with frame-level fades only.
+
+    Phase is continuous across symbol boundaries. Amplitude stays constant
+    except for a short fade at the start and end of each repeated frame
+    (not per-symbol silence). This reduces spectral splatter relative to
+    legacy per-symbol faded BFSK.
+    """
+    if repeats < 1 or repeats > 3:
+        raise ValueError("repeats must be 1, 2, or 3")
+    if inter_frame_silence < 0:
+        raise ValueError("inter_frame_silence must be >= 0")
+
+    chunks: List[np.ndarray] = []
+    silence_n = int(round(inter_frame_silence * config.sample_rate))
+    fade_n = max(1, int(round((frame_fade_ms / 1000.0) * config.sample_rate)))
+
+    for rep in range(repeats):
+        phase = 0.0
+        parts: List[np.ndarray] = []
+        for bit in bits:
+            if bit not in (0, 1):
+                raise ValueError(f"Invalid bit: {bit!r}")
+            freq = config.frequency_one if bit == 1 else config.frequency_zero
+            n = config.samples_per_symbol
+            t = np.arange(n, dtype=np.float64) / config.sample_rate
+            # Instantaneous phase: continuous integration
+            samples = config.amplitude * np.sin(
+                2.0 * np.pi * freq * t + phase
+            )
+            phase = (phase + 2.0 * np.pi * freq * config.symbol_duration) % (
+                2.0 * np.pi
+            )
+            parts.append(samples)
+        frame = np.concatenate(parts) if parts else np.zeros(0)
+        if len(frame) > 2 * fade_n:
+            ramp = np.linspace(0.0, 1.0, fade_n, endpoint=False)
+            frame = frame.copy()
+            frame[:fade_n] *= ramp
+            frame[-fade_n:] *= ramp[::-1]
+        chunks.append(frame)
+        if rep < repeats - 1 and silence_n > 0:
+            chunks.append(np.zeros(silence_n, dtype=np.float64))
+
+    if not chunks:
+        return np.zeros(0, dtype=np.float64)
+    waveform = np.concatenate(chunks)
+    peak = float(np.max(np.abs(waveform))) if len(waveform) else 0.0
+    if peak > 0.99:
+        waveform = waveform * (0.95 / peak)
+    return waveform.astype(np.float64)
+
+
+def modulate(
+    bits: Sequence[int],
+    config: ModulationConfig,
+    *,
+    modulation: str = "bfsk",
+    inter_frame_silence: float = 0.0,
+    repeats: int = 1,
+) -> np.ndarray:
+    """Dispatch to BFSK or CPFSK modulators."""
+    mode = modulation.lower().strip()
+    if mode == "bfsk":
+        return modulate_bfsk(
+            bits, config, inter_frame_silence=inter_frame_silence, repeats=repeats
+        )
+    if mode in ("cpfsk", "cp-fsk", "continuous"):
+        return modulate_cpfsk(
+            bits, config, inter_frame_silence=inter_frame_silence, repeats=repeats
+        )
+    raise ValueError(f"Unknown modulation: {modulation!r}")
