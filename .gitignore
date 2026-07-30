@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+# Keep curated blog/demo samples; ignore ad-hoc capture dumps
+output/*
+!output/.gitkeep
+!output/samples/
+!output/samples/**
+!output/screenshots/
+!output/screenshots/**
+# Never commit anything with POL in the name
+**/*POL*
+**/*pol*
+*.egg-info/
+dist/
+build/
+.DS_Store
