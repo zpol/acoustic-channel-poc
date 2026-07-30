@@ -20,7 +20,7 @@ Physical cal sweep (`output/calibration-audible-physical`, PHYSICAL_RX) peaked n
 ### Commands
 
 ```bash
-# Live monitor (waveform + energies + message)
+# Live monitor — UI live; CRC decode after capture (~47s for DEMO×2)
 python -m src.live_monitor --remote-tx nkn@192.168.68.109 \
   --remote-output-device 1 --message DEMO-LAB-2027 --modulation cpfsk
 
