@@ -71,8 +71,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--distance-cm", type=float, default=30.0)
     p.add_argument("--orientation", default="mic-facing-speaker")
     p.add_argument("--room", default="lab-quiet")
-    p.add_argument("--remote-tx", default=None, help="SSH host for remote TX e.g. nkn@192.168.68.109")
-    p.add_argument("--remote-dir", default="~/lab/acoustic-channel-poc")
+    p.add_argument("--remote-tx", default=None, help="SSH host for remote TX e.g. demo-user@tx-host")
+    p.add_argument("--remote-dir", default="/path/to/repository")
     p.add_argument("--remote-output-device", type=int, default=1)
     return p
 

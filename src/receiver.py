@@ -31,6 +31,7 @@ from src.modulation import (
     SymbolDecision,
     add_channel_impairments,
     bits_to_waveform,
+    modulate,
     demodulate_bits,
     detect_clipping,
     estimate_noise_floor,
@@ -48,7 +49,7 @@ from src.protocol import (
     encode_message,
     validate_payload,
 )
-from src.synchronization import find_sync_correlation
+from src.synchronization import find_sync_correlation, find_sync_soft_energy
 from src.visualizer import (
     save_bit_timeline,
     save_energy_over_time,
@@ -78,7 +79,16 @@ class QualityStats:
     timing_offset_samples: int = 0
     preamble_score: int = 0
     fec_corrected_bits: int = 0
+    syndrome_corrections_attempted: int = 0
+    fec_codewords_with_nonzero_syndrome: int = 0
+    post_fec_crc_valid: bool = False
     sync_state: str = "NO_SIGNAL"
+    sync_score: float = 0.0
+    nominal_symbol_duration_ms: float = 0.0
+    estimated_symbol_duration_ms: float = 0.0
+    clock_drift_percent: float = 0.0
+    combine_mode: str = "none"  # none | direct | soft_log_energy
+    frames_combined: int = 0
 
 
 @dataclass
@@ -213,6 +223,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--seed", type=int, default=42, help="RNG seed for simulate")
     parser.add_argument(
+        "--modulation",
+        choices=("bfsk", "cpfsk"),
+        default="bfsk",
+        help="Waveform used in --simulate (must match TX)",
+    )
+    parser.add_argument(
         "--fec",
         choices=FEC_MODES,
         default=FEC_NONE,
@@ -307,18 +323,24 @@ def _find_all_preambles(bits: Sequence[int]) -> List[int]:
     return hits
 
 
-def _majority_vote_decode(
+def _soft_log_energy_combine(
     soft_bits: Sequence[int],
     decisions: Sequence[SymbolDecision],
     fec: str = FEC_NONE,
-) -> DecodeResult:
-    """Majority-vote across repeated preamble-aligned frame copies."""
+    eps: float = 1e-20,
+) -> Tuple[DecodeResult, int]:
+    """Soft log-energy combining across repeated preamble-aligned copies.
+
+    For each symbol position accumulates ``log((e1+eps)/(e0+eps))`` from each
+    contributing copy, then hard-decides the sign. Prefer any directly
+    CRC-valid frame before combining (caller responsibility).
+    """
     hits = _find_all_preambles(list(soft_bits))
     if len(hits) < 2:
-        return DecodeResult(success=False, error="Not enough frame copies")
+        return DecodeResult(success=False, error="Not enough frame copies"), 0
 
-    # Infer frame length from first copy's length byte when possible
     frames: List[List[int]] = []
+    frame_decisions: List[List[SymbolDecision]] = []
     for h in hits:
         header = soft_bits[h + len(PREAMBLE_AND_SYNC) : h + len(PREAMBLE_AND_SYNC) + 16]
         if len(header) < 16:
@@ -331,7 +353,6 @@ def _majority_vote_decode(
             continue
         if length < 1 or length > 32:
             continue
-        # For FEC body the on-wire length differs; take a generous window
         try:
             frame_bits = frame_bit_count(length, fec=fec)
         except Exception:
@@ -339,8 +360,7 @@ def _majority_vote_decode(
         chunk = list(soft_bits[h : h + frame_bits])
         if len(chunk) < frame_bits // 2:
             continue
-        # Require reasonable energy on the copy
-        region = decisions[h : h + min(len(chunk), len(decisions) - h)]
+        region = list(decisions[h : h + min(len(chunk), len(decisions) - h)])
         if region:
             mean_e = float(
                 np.mean([max(d.energy_zero, d.energy_one) for d in region])
@@ -348,22 +368,41 @@ def _majority_vote_decode(
             if mean_e < 1e-4:
                 continue
         frames.append(chunk)
+        frame_decisions.append(region)
 
     if len(frames) < 2:
-        return DecodeResult(success=False, error="Not enough aligned copies")
+        return DecodeResult(success=False, error="Not enough aligned copies"), 0
 
-    # Use the most common frame length
     lengths = [len(f) for f in frames]
     target_len = max(set(lengths), key=lengths.count)
-    frames = [f for f in frames if len(f) == target_len]
-    if len(frames) < 2:
-        return DecodeResult(success=False, error="Not enough equal-length copies")
+    kept = [(f, d) for f, d in zip(frames, frame_decisions) if len(f) == target_len]
+    if len(kept) < 2:
+        return DecodeResult(success=False, error="Not enough equal-length copies"), 0
 
-    voted: List[int] = []
+    combined: List[int] = []
     for i in range(target_len):
-        ones = sum(f[i] for f in frames)
-        voted.append(1 if ones * 2 >= len(frames) else 0)
-    return decode_bits(voted, fec=fec)
+        score = 0.0
+        for _frame_bits, region in kept:
+            if i < len(region):
+                d = region[i]
+                score += float(
+                    np.log((d.energy_one + eps) / (d.energy_zero + eps))
+                )
+            else:
+                # Fall back to hard bit when energies unavailable
+                score += 1.0 if _frame_bits[i] else -1.0
+        combined.append(1 if score > 0.0 else 0)
+    return decode_bits(combined, fec=fec), len(kept)
+
+
+# Backwards-compatible alias (hard majority was inaccurate naming)
+def _majority_vote_decode(
+    soft_bits: Sequence[int],
+    decisions: Sequence[SymbolDecision],
+    fec: str = FEC_NONE,
+) -> DecodeResult:
+    result, _n = _soft_log_energy_combine(soft_bits, decisions, fec=fec)
+    return result
 
 
 def _try_decode_candidates(
@@ -373,11 +412,15 @@ def _try_decode_candidates(
     min_preamble_confidence: float = 0.15,
     fec: str = FEC_NONE,
     sync_mode: str = "legacy",
-) -> DecodeResult:
-    """Decode using hard bits first; soft bits / majority vote to repair."""
+) -> Tuple[DecodeResult, str, int, float]:
+    """Decode using hard bits first; soft energy sync / combining to repair.
+
+    Returns:
+        (result, combine_mode, frames_combined, sync_score)
+    """
     hard_result = decode_bits(hard_bits, fec=fec)
     if hard_result.success:
-        return hard_result
+        return hard_result, "direct", 1, 1.0
 
     # Soft repair at the hard-detected sync point (CRC flips, etc.)
     if hard_result.sync_offset is not None:
@@ -386,27 +429,39 @@ def _try_decode_candidates(
         if preamble_start >= 0:
             soft_result = decode_bits(soft_bits[preamble_start:], fec=fec)
             if soft_result.success:
-                return soft_result
+                return soft_result, "direct", 1, 1.0
 
-    # Correlation sync with Hamming tolerance
-    if sync_mode == "correlation":
+    sync_score = 0.0
+    # Soft energy correlation (preferred) or legacy hard Hamming correlation
+    if sync_mode in ("correlation", "soft", "soft_correlation"):
+        soft_sync = find_sync_soft_energy(decisions)
+        if soft_sync.best is not None:
+            sync_score = float(soft_sync.best.score)
+            cand = decode_bits(soft_bits[soft_sync.best.bit_index :], fec=fec)
+            if cand.success:
+                return cand, "direct", 1, sync_score
+            if soft_sync.best.bit_index < len(hard_bits):
+                cand_h = decode_bits(hard_bits[soft_sync.best.bit_index :], fec=fec)
+                if cand_h.success:
+                    return cand_h, "direct", 1, sync_score
+        # Legacy hard-bit correlation as fallback
         sync = find_sync_correlation(soft_bits, max_hamming=2)
         if sync.best is not None:
+            sync_score = max(sync_score, float(sync.best.score))
             cand = decode_bits(soft_bits[sync.best.bit_index :], fec=fec)
             if cand.success:
-                return cand
-            # Also try hard bits at same index
+                return cand, "direct", 1, sync_score
             if sync.best.bit_index < len(hard_bits):
                 cand_h = decode_bits(hard_bits[sync.best.bit_index :], fec=fec)
                 if cand_h.success:
-                    return cand_h
+                    return cand_h, "direct", 1, sync_score
 
     # Explicit hard preamble hits (repeated frames)
     for idx in _find_all_preambles(list(hard_bits)):
         for stream in (hard_bits[idx:], soft_bits[idx:]):
             result = decode_bits(stream, fec=fec)
             if result.success:
-                return result
+                return result, "direct", 1, sync_score
 
     # Soft preamble search with confidence gate
     for idx in _find_all_preambles(list(soft_bits)):
@@ -421,14 +476,14 @@ def _try_decode_candidates(
             continue
         result = decode_bits(soft_bits[idx:], fec=fec)
         if result.success:
-            return result
+            return result, "direct", 1, sync_score
 
-    # Majority vote across repeated copies (best effort)
-    voted = _majority_vote_decode(soft_bits, decisions, fec=fec)
-    if voted.success:
-        return voted
+    # Soft log-energy combining across repeated copies (only if no direct CRC)
+    combined, n_frames = _soft_log_energy_combine(soft_bits, decisions, fec=fec)
+    if combined.success:
+        return combined, "soft_log_energy", n_frames, sync_score
 
-    return hard_result
+    return hard_result, "none", 0, sync_score
 
 
 def decode_from_samples(
@@ -446,15 +501,24 @@ def decode_from_samples(
     sync_mode: str = "legacy",
     frequency_search_hz: float = 0.0,
     frequency_search_step_hz: float = 10.0,
+    symbol_duration_search_percent: float = 2.5,
+    symbol_duration_search_steps: int = 7,
 ) -> Tuple[QualityStats, List[SymbolDecision], DecodeResult]:
-    """Full demodulation + protocol decode pipeline with timing recovery."""
+    """Full demodulation + protocol decode with timing and clock-drift recovery.
+
+    When ``symbol_duration_search_percent`` > 0, searches a bounded grid of
+    symbol durations around the nominal configuration.
+    """
     stats = QualityStats()
-    # Ensure trailing symbol(s) are complete after arbitrary timing offsets.
+    stats.nominal_symbol_duration_ms = config.symbol_duration * 1000.0
+    stats.estimated_symbol_duration_ms = stats.nominal_symbol_duration_ms
     if len(samples) > 0:
         samples = np.concatenate(
             [samples, np.zeros(config.samples_per_symbol * 2, dtype=np.float64)]
         )
-    stats.clipping = detect_clipping(samples[: max(0, len(samples) - config.samples_per_symbol * 2)])
+    stats.clipping = detect_clipping(
+        samples[: max(0, len(samples) - config.samples_per_symbol * 2)]
+    )
     if stats.clipping and status is not None:
         status.notes.append("WARNING: clipping detected in recording")
 
@@ -466,44 +530,130 @@ def decode_from_samples(
     stats.noise_floor = noise
     effective_min_energy = max(min_energy, noise * 2.0)
 
-    if timing_search and len(samples) >= config.samples_per_symbol:
-        offset, bits_opt, decisions, preamble_score = find_best_timing_offset(
-            samples,
-            config,
-            min_energy=effective_min_energy,
-            min_ratio=min_ratio,
-            apply_bandpass=apply_bandpass,
-            n_steps=timing_steps,
-            frequency_search_hz=frequency_search_hz,
-            frequency_search_step_hz=frequency_search_step_hz,
-        )
-        stats.timing_offset_samples = offset
-        stats.preamble_score = preamble_score
-    else:
-        bits_opt, decisions = demodulate_bits(
-            samples,
-            config,
-            min_energy=effective_min_energy,
-            min_ratio=min_ratio,
-            apply_bandpass=apply_bandpass,
-            frequency_search_hz=frequency_search_hz,
-            frequency_search_step_hz=frequency_search_step_hz,
-        )
-        stats.timing_offset_samples = 0
-        stats.preamble_score = 0
+    duration_candidates = [config.symbol_duration]
+    if (
+        timing_search
+        and symbol_duration_search_percent > 0
+        and symbol_duration_search_steps > 1
+    ):
+        half = symbol_duration_search_percent / 100.0
+        duration_candidates = [
+            float(config.symbol_duration * (1.0 + frac))
+            for frac in np.linspace(-half, half, symbol_duration_search_steps)
+        ]
 
+    best_pack = None
+    for tsym in duration_candidates:
+        trial_cfg = ModulationConfig(
+            sample_rate=config.sample_rate,
+            symbol_duration=float(tsym),
+            frequency_zero=config.frequency_zero,
+            frequency_one=config.frequency_one,
+            amplitude=config.amplitude,
+            near_ultrasonic=config.near_ultrasonic,
+        )
+        if timing_search and len(samples) >= trial_cfg.samples_per_symbol:
+            offset, bits_opt, decisions, preamble_score = find_best_timing_offset(
+                samples,
+                trial_cfg,
+                min_energy=effective_min_energy,
+                min_ratio=min_ratio,
+                apply_bandpass=apply_bandpass,
+                n_steps=timing_steps,
+                frequency_search_hz=frequency_search_hz,
+                frequency_search_step_hz=frequency_search_step_hz,
+            )
+        else:
+            bits_opt, decisions = demodulate_bits(
+                samples,
+                trial_cfg,
+                min_energy=effective_min_energy,
+                min_ratio=min_ratio,
+                apply_bandpass=apply_bandpass,
+                frequency_search_hz=frequency_search_hz,
+                frequency_search_step_hz=frequency_search_step_hz,
+            )
+            offset, preamble_score = 0, 0
+
+        hard = _certain_bits(bits_opt)
+        soft = soft_bits_from_decisions(decisions)
+        result, combine_mode, frames_combined, sync_score = _try_decode_candidates(
+            hard, soft, decisions, fec=fec, sync_mode=sync_mode
+        )
+        pack = (
+            trial_cfg,
+            offset,
+            bits_opt,
+            decisions,
+            preamble_score,
+            result,
+            combine_mode,
+            frames_combined,
+            sync_score,
+        )
+        if best_pack is None:
+            best_pack = pack
+        elif result.success and not best_pack[5].success:
+            best_pack = pack
+        elif result.success and best_pack[5].success:
+            if sync_score > best_pack[8] or preamble_score > best_pack[4]:
+                best_pack = pack
+        elif not best_pack[5].success and not result.success:
+            def _fail_rank(res, pscore, sscore, dur):
+                err = (res.error or "")
+                # Prefer framed CRC failures over garbage length/sync errors
+                if "CRC" in err:
+                    quality = 3
+                elif "Preamble" in err or "sync" in err.lower():
+                    quality = 2
+                elif "length" in err.lower():
+                    quality = 0
+                else:
+                    quality = 1
+                # Prefer nominal duration on ties
+                prox = -abs(dur - config.symbol_duration)
+                return (quality, pscore, sscore, prox)
+
+            if _fail_rank(result, preamble_score, sync_score, tsym) > _fail_rank(
+                best_pack[5], best_pack[4], best_pack[8], best_pack[0].symbol_duration
+            ):
+                best_pack = pack
+        if result.success and abs(tsym - config.symbol_duration) < 1e-12:
+            break
+
+    assert best_pack is not None
+    (
+        used_cfg,
+        offset,
+        bits_opt,
+        decisions,
+        preamble_score,
+        result,
+        combine_mode,
+        frames_combined,
+        sync_score,
+    ) = best_pack
+    config = used_cfg
+    stats.timing_offset_samples = offset
+    stats.preamble_score = preamble_score
+    stats.estimated_symbol_duration_ms = used_cfg.symbol_duration * 1000.0
+    if stats.nominal_symbol_duration_ms > 0:
+        stats.clock_drift_percent = (
+            (stats.estimated_symbol_duration_ms - stats.nominal_symbol_duration_ms)
+            / stats.nominal_symbol_duration_ms
+            * 100.0
+        )
+    stats.sync_score = sync_score
+    stats.combine_mode = combine_mode
+    stats.frames_combined = frames_combined
     stats.n_symbols = len(decisions)
     stats.n_certain = sum(1 for d in decisions if d.bit is not None)
     stats.n_uncertain = stats.n_symbols - stats.n_certain
     if decisions:
-        stats.mean_confidence = float(
-            np.mean([d.confidence for d in decisions])
-        )
+        stats.mean_confidence = float(np.mean([d.confidence for d in decisions]))
 
     signal_energies = [
-        max(d.energy_zero, d.energy_one)
-        for d in decisions
-        if d.bit is not None
+        max(d.energy_zero, d.energy_one) for d in decisions if d.bit is not None
     ]
     if signal_energies and noise > 0:
         stats.snr_estimate_db = float(
@@ -515,21 +665,21 @@ def decode_from_samples(
             )
 
     found, idx = _find_preamble_in_optional(bits_opt)
-    # Soft bits may recover a preamble hard bits missed
     soft = soft_bits_from_decisions(decisions)
+    hard = _certain_bits(bits_opt)
     if not found:
         soft_hits = _find_all_preambles(soft)
         if soft_hits:
             found, idx = True, soft_hits[0]
-    if sync_mode == "correlation":
-        sync = find_sync_correlation(soft)
-        stats.sync_state = sync.state
-        if sync.best is not None:
+    if sync_mode in ("correlation", "soft", "soft_correlation"):
+        soft_sync = find_sync_soft_energy(decisions)
+        stats.sync_state = soft_sync.state
+        if soft_sync.best is not None:
             found = True
-            idx = sync.best.bit_index
+            idx = soft_sync.best.bit_index
+            stats.sync_score = max(stats.sync_score, float(soft_sync.best.score))
     else:
         stats.sync_state = "SYNCED" if found else "NO_SIGNAL"
-
     stats.preamble_found = found
     if status is not None:
         status.preamble_status = (
@@ -543,9 +693,7 @@ def decode_from_samples(
             status.energy_zero = last.energy_zero
             status.energy_one = last.energy_one
             status.confidence = last.confidence
-            status.detected_bit = (
-                str(last.bit) if last.bit is not None else "?"
-            )
+            status.detected_bit = str(last.bit) if last.bit is not None else "?"
             if last.bit == 1:
                 status.current_frequency = f"{config.frequency_one:.0f} Hz"
             elif last.bit == 0:
@@ -553,12 +701,6 @@ def decode_from_samples(
             else:
                 status.current_frequency = "uncertain"
 
-    hard = _certain_bits(bits_opt)
-    result = _try_decode_candidates(
-        hard, soft, decisions, fec=fec, sync_mode=sync_mode
-    )
-
-    # If still failing, refine around the chosen offset (± half step)
     if not result.success and timing_search:
         sps = config.samples_per_symbol
         step = max(1, sps // max(4, timing_steps))
@@ -578,7 +720,7 @@ def decode_from_samples(
                 frequency_search_hz=frequency_search_hz,
                 frequency_search_step_hz=frequency_search_step_hz,
             )
-            cand = _try_decode_candidates(
+            cand, cmode, nfr, sscore = _try_decode_candidates(
                 _certain_bits(b2),
                 soft_bits_from_decisions(d2),
                 d2,
@@ -588,21 +730,25 @@ def decode_from_samples(
             if cand.success:
                 result = cand
                 bits_opt, decisions = b2, d2
+                soft = soft_bits_from_decisions(decisions)
+                hard = _certain_bits(bits_opt)
                 stats.timing_offset_samples = off
                 stats.n_symbols = len(decisions)
                 stats.n_certain = sum(1 for d in decisions if d.bit is not None)
                 stats.n_uncertain = stats.n_symbols - stats.n_certain
+                stats.combine_mode = cmode
+                stats.frames_combined = nfr
+                stats.sync_score = sscore
                 found, idx = _find_preamble_in_optional(bits_opt)
-                stats.preamble_found = found or bool(
-                    _find_all_preambles(soft_bits_from_decisions(decisions))
-                )
-                hard = _certain_bits(bits_opt)
-                soft = soft_bits_from_decisions(decisions)
+                stats.preamble_found = found or bool(_find_all_preambles(soft))
                 break
 
     stats.frame_success = result.success
     stats.decode_error = result.error
     stats.fec_corrected_bits = result.fec_corrected_bits
+    stats.syndrome_corrections_attempted = result.fec_corrected_bits
+    stats.fec_codewords_with_nonzero_syndrome = result.fec_corrected_bits
+    stats.post_fec_crc_valid = bool(result.success)
     if result.success and result.frame is not None:
         stats.recovered_message = result.frame.payload_text
         stats.preamble_found = True
@@ -630,12 +776,11 @@ def decode_from_samples(
         compare = compare_bits[align_idx : align_idx + len(expected_bits)]
         n = min(len(compare), len(expected_bits))
         if n > 0:
-            errors = sum(
-                1 for a, b in zip(compare[:n], expected_bits[:n]) if a != b
-            )
+            errors = sum(1 for a, b in zip(compare[:n], expected_bits[:n]) if a != b)
             stats.bit_error_rate = errors / n
 
     return stats, decisions, result
+
 
 
 def record_audio(
@@ -681,17 +826,16 @@ def record_audio(
 def run_simulation(args: argparse.Namespace, config: ModulationConfig) -> int:
     validate_payload(args.message)
     expected_bits = encode_message(args.message, fec=args.fec)
-    tx = bits_to_waveform(
-        expected_bits,
-        ModulationConfig(
-            sample_rate=config.sample_rate,
-            symbol_duration=config.symbol_duration,
-            frequency_zero=config.frequency_zero,
-            frequency_one=config.frequency_one,
-            amplitude=args.amplitude,
-            near_ultrasonic=config.near_ultrasonic,
-        ),
+    tx_cfg = ModulationConfig(
+        sample_rate=config.sample_rate,
+        symbol_duration=config.symbol_duration,
+        frequency_zero=config.frequency_zero,
+        frequency_one=config.frequency_one,
+        amplitude=args.amplitude,
+        near_ultrasonic=config.near_ultrasonic,
     )
+    modulation = getattr(args, "modulation", "bfsk")
+    tx = modulate(expected_bits, tx_cfg, modulation=modulation)
     rng = np.random.default_rng(args.seed)
     rx = add_channel_impairments(
         tx,

@@ -7,7 +7,7 @@ runs once after capture completes.
 
 Examples::
 
-    python -m src.live_monitor --remote-tx nkn@192.168.68.109 \\
+    python -m src.live_monitor --remote-tx demo-user@tx-host \\
         --remote-output-device 1 --message DEMO-LAB-2027 --modulation cpfsk
 """
 
@@ -34,6 +34,7 @@ from src.modulation import ModulationConfig, goertzel
 from src.protocol import encode_message, estimate_duration
 from src.provenance import Provenance
 from src.receiver import decode_from_samples
+from src.safety import SafetyError, assert_playback_allowed
 
 console = Console()
 
@@ -73,7 +74,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--repeats", type=int, default=2, choices=(1, 2, 3))
     p.add_argument("--self-tx", action="store_true")
     p.add_argument("--remote-tx", default=None)
-    p.add_argument("--remote-dir", default="~/lab/acoustic-channel-poc")
+    p.add_argument(
+        "--remote-dir",
+        default="/path/to/repository",
+        help="Remote repository path (SSH orchestration of playback only)",
+    )
     p.add_argument("--remote-output-device", type=int, default=1)
     p.add_argument("--near-ultrasonic", action="store_true")
     p.add_argument("--tx-delay", type=float, default=2.5)
@@ -191,13 +196,27 @@ def main(argv: Optional[List[str]] = None) -> int:
         console.print("[red]Need --near-ultrasonic for carriers > 17 kHz[/red]")
         return 2
 
+    auto_tx = bool(args.self_tx or args.remote_tx)
+    if auto_tx:
+        try:
+            assert_playback_allowed(
+                config=cfg,
+                payload=args.message,
+                repeats=args.repeats,
+                inter_frame_silence=0.3,
+                near_ultrasonic=bool(args.near_ultrasonic),
+                fec=args.fec,
+            )
+        except SafetyError as exc:
+            console.print(f"[red]Safety rejection:[/red] {exc}")
+            return 2
+
     try:
         import sounddevice as sd
     except ImportError as exc:
         console.print(f"[red]sounddevice required:[/red] {exc}")
         return 1
 
-    auto_tx = bool(args.self_tx or args.remote_tx)
     if auto_tx:
         tx_dur = estimate_duration(
             args.message, cfg.symbol_duration,

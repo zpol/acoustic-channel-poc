@@ -1,15 +1,30 @@
 # Results summary
 
 Docs and code for the conference upgrade live on `main` (see `git log -5 --oneline`).
-Physical speed notes below refer to remote TX `t11` → local mic captures labelled **PHYSICAL_RX**.
+Physical speed notes below refer to remote TX `remote-lab-tx` → local mic captures labelled **PHYSICAL_RX**.
 
-## Scope
+## Campaign register (one row per session)
 
-Authorized lab/conference demo. Synthetic payloads only. Metrics use **estimated_detector_snr_db** (not SPL) and labelled provenance.
+Non-monotonic results may reflect synchronization, reflections, device latency,
+frequency response and **small sample sizes** — do not merge into one success rate.
+
+| Campaign ID | Date | Git commit (approx) | Hardware | TX | RX | Payload | Distance / orientation | Room | Trials | CRC-valid | CRC fail | Sync fail | Duration | Provenance |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| local-audible-cpfsk-120 | 2026-07-30 | 478b17a… | same-host speakers→mic | CPFSK 3500/7500, 0.12 s, amp~0.25 | local mic | mixed HELLO / DEMO… | ~30–50 cm | lab | 10 | 6 | 4 | 0 noted | ~session | PHYSICAL_RX |
+| remote-tx-local-rx-120 | 2026-07-30 | 478b17a… | remote speakers → local mic | CPFSK 3500/7500, 0.12 s, amp 0.28 | local mic | HELLO / DEMO-LAB-2027 / ACOUSTIC-CHANNEL | desk spacing | lab | 10 | 8 | 2 | earlier session had sync fails | ~session | PHYSICAL_RX |
+| remote-hamming74-HELLO | 2026-07-30 | 478b17a… | remote → local | CPFSK + hamming74 | local mic | HELLO | desk | lab | 4 | 4 | 0 | 0 | short | PHYSICAL_RX |
+| remote-fast-70ms | 2026-07-30 | 478b17a… | remote → local | CPFSK 3000/8000, 0.07 s, repeats=1 | local mic | DEMO_DEMO_334 | desk | lab | 3 | 3 | 0 | 0 | ~12 s TX | PHYSICAL_RX |
+| remote-fast-40ms | 2026-07-30 | 478b17a… | remote → local | CPFSK 3000/8000, 0.04 s | local mic | DEMO_DEMO_334 | desk | lab | 3 | 2 | 1 | 0 | ~7 s TX | PHYSICAL_RX |
+| remote-fast-50-60ms-fail | 2026-07-30 | 478b17a… | remote → local | CPFSK 3000/8000, 0.05–0.06 s | local mic | DEMO_DEMO_334 | desk | lab | sweep | 0 in initial sweep | yes | possible | short | PHYSICAL_RX |
+| cal-audible-physical | 2026-07-30 | 478b17a… | remote sweep TX | tones 2–10 kHz | local mic | N/A (sweep) | desk | lab | sweep | N/A | N/A | N/A | minutes | PHYSICAL_RX |
+| cal-near-us-physical | 2026-07-30 | 478b17a… | remote sweep TX | tones 15–21 kHz | local mic | N/A | desk | lab | sweep | decode not reliable | — | — | minutes | PHYSICAL_RX |
+| sim-cpfsk-hamming74 | 2026-07-30 | 478b17a… | none | CPFSK + FEC | simulated | HELLO | N/A | N/A | 3 | 3 | 0 | 0 | short | SIMULATED_RX |
+
+Earlier historical note: **120 ms** was a strong operating point for the remote audible setup before faster 70 ms trials were identified.
 
 ## Physical hardware (redacted)
 
-- **TX:** remote ThinkPad `t11` (sof-hda-dsp speakers, sounddevice output index 1)
+- **TX:** remote ThinkPad `remote-lab-tx` (sof-hda-dsp speakers, sounddevice output index 1)
 - **RX:** lab capture host, Rear Mic / ALC897 Analog path, device 0
 - Room: lab; nominal mic orientation toward remote speakers
 
@@ -49,7 +64,7 @@ Provenance: **PHYSICAL_RX**
 
 ## Physical campaign B — remote TX → local RX
 
-Path: `experiments/20260730T190041-remote-t11-tx-local-rx/`  
+Path: local dump `experiments/20260730T190041-remote-*-tx-local-rx/` (hostname redacted in publishable copies under `output/samples/experiment-summaries/`)  
 Provenance: **PHYSICAL_RX**
 
 | Item | Value |
@@ -79,7 +94,7 @@ Provenance: **PHYSICAL_RX**
 
 ## Physical campaign D — fast audible `DEMO_DEMO_334`
 
-Provenance: **PHYSICAL_RX** (remote `t11` TX → local mic). Modulation CPFSK, carriers 3000/8000 Hz, repeats=1.
+Provenance: **PHYSICAL_RX** (remote `remote-lab-tx` TX → local mic). Modulation CPFSK, carriers 3000/8000 Hz, repeats=1.
 
 | Tsym | Approx TX | Result |
 |------|-----------|--------|
@@ -114,7 +129,7 @@ CPFSK did **not** show lower audible-band leakage than legacy BFSK in the 18.5/1
 source .venv/bin/activate
 pytest -q
 python scripts/run_experiment_matrix.py
-python -m src.experiment --non-interactive --remote-tx nkn@192.168.68.109 \
+python -m src.experiment --non-interactive --remote-tx demo-user@tx-host \
   --remote-output-device 1 --trials 10 --modulation cpfsk
 ```
 

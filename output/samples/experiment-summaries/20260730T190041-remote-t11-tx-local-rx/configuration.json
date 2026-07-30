@@ -1,6 +1,6 @@
 {
   "provenance": "PHYSICAL_RX",
-  "tx_host": "t11 / 192.168.68.109",
+  "tx_host": "remote-lab-tx / 192.0.2.10",
   "rx_host": "local",
   "modulation": "cpfsk",
   "output_device_remote": 1,

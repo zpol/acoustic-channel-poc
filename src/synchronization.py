@@ -103,7 +103,11 @@ def soft_preamble_correlation(
     soft_bits: Sequence[int],
     pattern: Sequence[int] = PREAMBLE_AND_SYNC,
 ) -> List[SyncCandidate]:
-    """Score every alignment of *pattern* against hard/soft bits."""
+    """Legacy Hamming-tolerant match against hard 0/1 decisions.
+
+    Prefer ``energy_soft_preamble_correlation`` when SymbolDecision energies
+    are available. This function is retained for comparison and tests.
+    """
     plen = len(pattern)
     out: List[SyncCandidate] = []
     if len(soft_bits) < plen:
@@ -125,12 +129,65 @@ def soft_preamble_correlation(
     return out
 
 
+def soft_symbol_value(energy_zero: float, energy_one: float, eps: float = 1e-20) -> float:
+    """Map tone energies to a signed soft bit in [-1, +1].
+
+    Positive → prefer bit 1; negative → prefer bit 0.
+    """
+    return float(
+        (energy_one - energy_zero) / (energy_one + energy_zero + eps)
+    )
+
+
+def energy_soft_preamble_correlation(
+    decisions: Sequence[object],
+    pattern: Sequence[int] = PREAMBLE_AND_SYNC,
+) -> List[SyncCandidate]:
+    """Normalized correlation of soft energy values against the preamble.
+
+    Expected bits map ``0→-1``, ``1→+1``. Weak symbols (near-zero soft value)
+    contribute little; strong mismatches reduce the score.
+    """
+    plen = len(pattern)
+    out: List[SyncCandidate] = []
+    if len(decisions) < plen:
+        return out
+    expected = np.array([1.0 if b else -1.0 for b in pattern], dtype=np.float64)
+    for i in range(len(decisions) - plen + 1):
+        window = decisions[i : i + plen]
+        soft = np.array(
+            [
+                soft_symbol_value(
+                    float(getattr(d, "energy_zero")),
+                    float(getattr(d, "energy_one")),
+                )
+                for d in window
+            ],
+            dtype=np.float64,
+        )
+        denom = float(np.linalg.norm(soft) * np.linalg.norm(expected)) + 1e-12
+        score = float(np.dot(soft, expected) / denom)
+        # Approximate Hamming for reporting using hard decisions
+        hard = [1 if s >= 0 else 0 for s in soft]
+        ham = sum(1 for a, b in zip(hard, pattern) if a != b)
+        out.append(
+            SyncCandidate(
+                bit_index=i,
+                score=score,
+                hamming_distance=ham,
+                confidence=max(0.0, min(1.0, (score + 1.0) / 2.0)),
+            )
+        )
+    out.sort(key=lambda c: (-c.score, c.bit_index))
+    return out
+
+
 def find_sync_correlation(
     soft_bits: Sequence[int],
     max_hamming: int = 2,
     pattern: Sequence[int] = PREAMBLE_AND_SYNC,
 ) -> SyncResult:
-    """Correlation sync with Hamming-distance tolerance."""
+    """Hard-bit correlation sync with Hamming-distance tolerance (legacy)."""
     cands = soft_preamble_correlation(soft_bits, pattern)
     accepted = [c for c in cands if c.hamming_distance <= max_hamming]
     if not soft_bits:
@@ -149,6 +206,29 @@ def find_sync_correlation(
         candidates=tuple(accepted[:5]),
         best=best,
     )
+
+
+def find_sync_soft_energy(
+    decisions: Sequence[object],
+    min_score: float = 0.55,
+    pattern: Sequence[int] = PREAMBLE_AND_SYNC,
+) -> SyncResult:
+    """Soft energy-based preamble correlation (preferred production sync)."""
+    cands = energy_soft_preamble_correlation(decisions, pattern)
+    if not decisions:
+        return SyncResult(state="NO_SIGNAL", candidates=(), best=None)
+    if not cands:
+        return SyncResult(state="NO_SIGNAL", candidates=(), best=None)
+    best = cands[0]
+    if best.score >= min_score:
+        return SyncResult(state="SYNCED", candidates=tuple(cands[:5]), best=best)
+    if best.score > 0.25:
+        return SyncResult(
+            state="PREAMBLE_CANDIDATE",
+            candidates=tuple(cands[:5]),
+            best=best,
+        )
+    return SyncResult(state="NO_SIGNAL", candidates=tuple(cands[:3]), best=None)
 
 
 def goertzel_neighbourhood(

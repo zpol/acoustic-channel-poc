@@ -1,8 +1,12 @@
-# Acoustic Channel PoC (BFSK)
+# Acoustic Channel PoC
 
-Educational, **local** proof of concept that transmits a short **synthetic** text message through a computer speaker and recovers it with an external microphone on the same PC.
+[![CI](https://github.com/zpol/acoustic-channel-poc/actions/workflows/ci.yml/badge.svg)](https://github.com/zpol/acoustic-channel-poc/actions/workflows/ci.yml)
+
+Educational proof of concept that transmits a short **synthetic** text message through a computer speaker and recovers it with a microphone.
 
 Built for an **authorized cybersecurity conference demo** to illustrate that an acoustic path can carry framed digital data — not for covert use, malware, or collecting real user information.
+
+**CI (local baseline for this publication pass):** 93 passed · hardware tests excluded from default CI · see `docs/final-validation-report.md`.
 
 ## Upgrade features (conference-ready)
 
@@ -22,11 +26,11 @@ Physical results are labelled **PHYSICAL_RX** and curated under `output/samples/
 
 ```bash
 # Reliable default (~0.12s symbols, 2 repeats)
-python -m src.live_monitor --remote-tx nkn@192.168.68.109 \
+python -m src.live_monitor --remote-tx demo-user@tx-host \
   --remote-output-device 1 --message DEMO-LAB-2027 --modulation cpfsk
 
 # Fast demo (~0.07s, ~12s airtime for DEMO_DEMO_334)
-python -m src.live_monitor --remote-tx nkn@192.168.68.109 \
+python -m src.live_monitor --remote-tx demo-user@tx-host \
   --remote-output-device 1 --message DEMO_DEMO_334 --modulation cpfsk \
   --symbol-duration 0.07 --frequency-zero 3000 --frequency-one 8000 \
   --repeats 1 --amplitude 0.30
@@ -47,7 +51,7 @@ python scripts/physical_calibration_remote.py --band both
 * Transmit **only** manually supplied synthetic payloads (for example `DEMO-LAB-2027`).
 * Do **not** use this software to access passwords, browser data, files, environment variables, credentials, clipboard contents, or any real user information.
 * This repository does **not** implement malware, persistence, privilege escalation, evasion, exploitation, remote control, or automatic data collection.
-* There is **no network** component. All I/O is local speaker / microphone / files you explicitly request.
+* The acoustic data channel does **not** require a network. During some authorized laboratory experiments, SSH may optionally be used only to coordinate playback on a separate transmitter. The demonstrated payload itself travels through the acoustic channel.
 * Audible mode is the **default**. Near-ultrasonic mode requires `--near-ultrasonic` and prints a high-frequency warning.
 * Keep speaker volume low. Default amplitude is deliberately limited (`0.15`).
 
@@ -256,8 +260,19 @@ python -m src.receiver --profile reliable --input-device 0 --duration 60
 python -m src.transmitter --profile turbo --message HELLO --output-device 0
 ```
 
-On this lab PC, live tests reached **100% frame success at 120 ms + 3.5/7.5 kHz**.
-At 100 ms success dropped to 0% — so `fast` is the practical ceiling without FEC.
+On the documented laboratory hardware, an early physical campaign found
+**120 ms** per symbol (3500/7500 Hz, CPFSK) to be a reliable operating point
+for that setup (**8/10** CRC-valid frames, remote TX → local mic). Later
+experiments identified faster working configurations, including
+**3/3 CRC-valid frames at 70 ms** per symbol (3000/8000 Hz, CPFSK,
+`DEMO_DEMO_334`) and **2/3** at 40 ms. Results remain hardware-, room- and
+configuration-dependent. Do not generalize small trial counts into
+universal reliability percentages.
+
+Near-ultrasonic generation works digitally; **physical near-ultrasonic
+decoding was not reliable** on the tested speaker/microphone pair
+(measured detector SNR mostly negative). A 48 kHz Nyquist limit does not
+guarantee usable physical response near 24 kHz.
 
 ## Visualizations
 
@@ -341,8 +356,20 @@ Tips for higher live success rate:
 
 * Keep the mic about 20–50 cm from the speaker
 * Avoid clipping (lower Capture gain / `--amplitude` if peak hits 1.0)
-* Use `--repeats 2` (or 3) so the decoder can majority-vote copies
+* Use `--repeats 2` (or 3) so the decoder can soft-combine frame copies when needed
 * Prefer wired devices; start the receiver a couple of seconds before TX
+
+## Physical-result summary (bounded)
+
+* Physical audible communication succeeded on the documented laboratory hardware.
+* CPFSK and correlation synchronization are implemented.
+* Hamming(7,4) produced promising results in small trial sets (**4/4** HELLO with FEC in one campaign). Syndrome corrections are attempts — **CRC remains the trust decision**.
+* Faster configurations were identified (**3/3** at 70 ms; **2/3** at 40 ms for `DEMO_DEMO_334`).
+* Near-ultrasonic generation works digitally.
+* Near-ultrasonic physical decoding was **not reliable** on the tested speaker and microphone combination.
+* The 48 kHz Nyquist limit does **not** guarantee usable physical response near 24 kHz.
+
+See `docs/results-summary.md` and `docs/article-evidence-manifest.md`.
 
 Coverage includes text↔bits, framing, CRC, preamble detection, clean/noisy decode, invalid CRC, empty and oversized payload rejection.
 
@@ -429,20 +456,41 @@ acoustic-channel-poc/
 ├── README.md
 ├── requirements.txt
 ├── pytest.ini
+├── configs/
+│   └── conference-audible-demo.yaml
+├── docs/
+│   ├── results-summary.md
+│   ├── demo-day-configs.md
+│   ├── article-evidence-manifest.md
+│   ├── final-publication-audit.md
+│   └── final-validation-report.md
 ├── src/
-│   ├── __init__.py
 │   ├── protocol.py
 │   ├── modulation.py
+│   ├── fec.py
+│   ├── synchronization.py
+│   ├── signal_analysis.py
 │   ├── transmitter.py
 │   ├── receiver.py
+│   ├── live_monitor.py
+│   ├── experiment.py
+│   ├── hardware_profile.py
+│   ├── stage_demo.py
+│   ├── replay.py
+│   ├── safety.py
+│   ├── provenance.py
+│   ├── benchmark.py
 │   ├── calibration.py
 │   ├── audio_devices.py
 │   └── visualizer.py
+├── scripts/
+│   └── docs_safety_scan.py
 ├── tests/
-│   ├── test_protocol.py
-│   ├── test_modulation.py
-│   └── test_decoder.py
-└── output/
+├── experiments/          # local physical dumps (may retain lab metadata)
+├── output/
+│   ├── samples/          # curated GENERATED / SIMULATED / PHYSICAL artefacts
+│   └── article/          # publication-ready figures
+└── .github/workflows/
 ```
 
 ## License / intent

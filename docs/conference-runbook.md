@@ -6,7 +6,7 @@ Authorized educational demonstration only. Synthetic payloads via CLI.
 
 - Presenter laptop (TX) with working speakers
 - Capture host with microphone (USB or Rear Mic)
-- Optional: remote TX via SSH (`nkn@192.168.68.109` / `t11`)
+- Optional: remote TX via SSH (`demo-user@tx-host` / `remote-lab-tx`)
 - Quiet room; disable mic monitoring if possible (manual OS settings)
 - Pre-copied `experiments/` physical capture for replay fallback
 
@@ -38,7 +38,7 @@ python -m src.calibration --physical --near-ultrasonic \
 ## Live monitor
 
 ```bash
-python -m src.live_monitor --remote-tx nkn@192.168.68.109 \
+python -m src.live_monitor --remote-tx demo-user@tx-host \
   --remote-output-device 1 --message DEMO-LAB-2027 --modulation cpfsk
 ```
 
@@ -68,7 +68,7 @@ python -m src.stage_demo --wizard
 Live remote TX + local RX experiment:
 
 ```bash
-python -m src.experiment --non-interactive --remote-tx nkn@192.168.68.109 \
+python -m src.experiment --non-interactive --remote-tx demo-user@tx-host \
   --remote-output-device 1 --message DEMO-LAB-2027 --trials 5 \
   --modulation cpfsk --fec none
 ```

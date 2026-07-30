@@ -9,7 +9,7 @@
   "sample_rate": 48000,
   "input_device": 0,
   "output_device": 0,
-  "remote_tx": "nkn@192.168.68.109",
+  "remote_tx": "demo-user@tx-host",
   "latency": {
     "detected": true,
     "seconds": 1.6039375,

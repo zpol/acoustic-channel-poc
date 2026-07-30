@@ -20,12 +20,22 @@ from typing import List, Sequence, Tuple
 
 @dataclass(frozen=True)
 class FecResult:
-    """Result of FEC decoding a bit sequence."""
+    """Result of FEC decoding a bit sequence.
+
+    ``corrected_bits`` counts syndrome-driven flip *attempts*. A non-zero
+    syndrome does **not** guarantee the original codeword was restored
+    (double-bit errors can be miscorrected). Trust ``post_fec_crc_valid``.
+    """
 
     bits: List[int]
-    corrected_bits: int
+    corrected_bits: int  # aka syndrome_corrections_attempted
     uncorrectable_blocks: int
     blocks: int
+    codewords_with_nonzero_syndrome: int = 0
+
+    @property
+    def syndrome_corrections_attempted(self) -> int:
+        return self.corrected_bits
 
 
 def _parity3(d: Sequence[int]) -> Tuple[int, int, int]:
@@ -108,9 +118,12 @@ def decode_hamming74(code_bits: Sequence[int]) -> FecResult:
         )
     blocks = len(code_bits) // 7
     corrected_total = 0
+    nonzero_syndrome = 0
     # First block = pad header
     pad_bits, c0 = decode_hamming74_block(code_bits[0:7])
     corrected_total += c0
+    if c0:
+        nonzero_syndrome += 1
     pad = (pad_bits[0] << 3) | (pad_bits[1] << 2) | (pad_bits[2] << 1) | pad_bits[3]
     if pad > 3:
         # Likely uncorrectable header corruption
@@ -123,6 +136,8 @@ def decode_hamming74(code_bits: Sequence[int]) -> FecResult:
         chunk = code_bits[b * 7 : (b + 1) * 7]
         d4, c = decode_hamming74_block(chunk)
         corrected_total += c
+        if c:
+            nonzero_syndrome += 1
         data.extend(d4)
     if pad:
         data = data[: len(data) - pad]
@@ -131,6 +146,7 @@ def decode_hamming74(code_bits: Sequence[int]) -> FecResult:
         corrected_bits=corrected_total,
         uncorrectable_blocks=uncorrectable,
         blocks=blocks,
+        codewords_with_nonzero_syndrome=nonzero_syndrome,
     )
 
 

@@ -10,6 +10,8 @@ output/*
 !output/samples/**
 !output/screenshots/
 !output/screenshots/**
+!output/article/
+!output/article/**
 # Never commit anything with POL in the name
 **/*POL*
 **/*pol*

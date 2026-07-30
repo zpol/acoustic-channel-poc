@@ -266,11 +266,26 @@ def play_and_record(
     sample_rate: int,
     input_device: Optional[int],
     output_device: Optional[int],
+    *,
+    near_ultrasonic: bool = False,
+    probe_frequency_hz: float = 1000.0,
 ) -> np.ndarray:
     try:
         import sounddevice as sd
     except ImportError as exc:
         raise RuntimeError("sounddevice is required") from exc
+
+    from src.safety import assert_calibration_playback
+
+    peak = float(np.max(np.abs(waveform))) if len(waveform) else 0.0
+    dur = len(waveform) / float(sample_rate) if sample_rate else 0.0
+    assert_calibration_playback(
+        peak_amplitude=peak,
+        sample_rate=sample_rate,
+        duration_s=dur,
+        max_probe_hz=max(probe_frequency_hz, 1000.0),
+        near_ultrasonic=near_ultrasonic or probe_frequency_hz > 17000,
+    )
 
     if input_device is not None:
         from src.audio_devices import validate_input_device
@@ -414,6 +429,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 args.sample_rate,
                 args.input_device,
                 args.output_device,
+                near_ultrasonic=bool(args.near_ultrasonic),
+                probe_frequency_hz=float(max(f_start, f_stop)),
             )
         except Exception as exc:
             console.print(f"[red]Audio I/O error:[/red] {exc}")

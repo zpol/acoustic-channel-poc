@@ -1,1 +1,6 @@
-{"provenance":"PHYSICAL_RX","source":"experiments/20260730T190041-remote-t11-tx-local-rx/trial-001","message":"HELLO"}
+{
+  "note": "Use rx.wav.meta.json for verified replay. This file is a human summary only.",
+  "provenance": "PHYSICAL_RX",
+  "expected_payload": "HELLO",
+  "see": "rx.wav.meta.json"
+}

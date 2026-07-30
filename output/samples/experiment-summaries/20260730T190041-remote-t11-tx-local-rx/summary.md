@@ -1,4 +1,4 @@
-# remote-t11 TX → local RX
+# remote-remote-lab-tx TX → local RX
 Success 8/10 (80%) PHYSICAL_RX
 - 1: OK HELLO BER=0.0
 - 2: OK HELLO BER=0.0

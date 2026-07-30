@@ -10,7 +10,7 @@ Redacted device descriptions only in publishable metadata (no usernames, home pa
 - Prefer analog output device over HDMI sinks for TX when same-host
 - Same-process duplex ALSA often unreliable → two-process RX-then-TX
 
-### Remote TX (`t11` / 192.168.68.109)
+### Remote TX (`remote-lab-tx` / 192.0.2.10)
 
 - ThinkPad with sof-hda-dsp speakers; sounddevice device index **1** worked for playback
 - Pulse/PipeWire Speaker sink should be unmuted (~80–85%)

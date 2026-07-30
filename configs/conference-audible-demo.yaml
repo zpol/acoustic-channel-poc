@@ -1,0 +1,19 @@
+name: conference-audible-demo
+provenance: physically_validated_configuration
+modulation: cpfsk
+frequency_zero_hz: 3000
+frequency_one_hz: 8000
+symbol_duration_seconds: 0.070
+fec_mode: none
+sync_mode: soft_correlation
+repetitions: 2
+sample_rate: 48000
+amplitude: 0.28
+maximum_payload_bytes: 16
+validation_trials: "3/3 CRC-valid at 70 ms (DEMO_DEMO_334); earlier 8/10 at 120 ms 3500/7500"
+validation_git_commit: "478b17a8b9f650bc10f56f2ebe087c50fe039c84"
+notes:
+  - Validated on the documented laboratory hardware (remote TX speakers → local mic).
+  - Recalibration is required for different hardware or rooms.
+  - Not universally reliable; small trial counts must be stated with results.
+  - Near-ultrasonic physical decode was not reliable on the same hardware pair.

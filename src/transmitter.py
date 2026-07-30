@@ -29,6 +29,7 @@ from src.modulation import (
     modulate,
 )
 from src.cli_common import add_profile_argument, apply_profile
+from src.safety import SafetyError, assert_playback_allowed
 from src.protocol import (
     MAX_PAYLOAD_BYTES,
     encode_message,
@@ -284,6 +285,19 @@ def main(argv: Optional[List[str]] = None) -> int:
         f"[bold]Expected transmission duration:[/bold] {duration:.2f} s "
         f"({n_bits} bits/frame × {args.repeats} repeat(s))"
     )
+
+    try:
+        assert_playback_allowed(
+            config=config,
+            payload=args.message,
+            repeats=args.repeats,
+            inter_frame_silence=args.inter_frame_silence,
+            near_ultrasonic=bool(args.near_ultrasonic),
+            fec=args.fec,
+        )
+    except SafetyError as exc:
+        console.print(f"[red]Safety rejection:[/red] {exc}")
+        return 2
 
     try:
         waveform = generate_signal(

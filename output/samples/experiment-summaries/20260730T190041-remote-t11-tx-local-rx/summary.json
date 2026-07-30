@@ -1,6 +1,6 @@
 {
   "provenance": "PHYSICAL_RX",
-  "setup": "remote-t11-tx-local-rx",
+  "setup": "remote-remote-lab-tx-tx-local-rx",
   "modulation": "cpfsk",
   "n_trials": 10,
   "n_ok": 8,

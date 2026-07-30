@@ -1,90 +1,76 @@
 # Demo-day configurations
 
-Provenance for live audio: **PHYSICAL_RX**. Generated visuals: **GENERATED_TX**.
+Authorized lab / conference use only. Synthetic payloads only.
 
-## AUDIBLE (primary live path)
+SSH may optionally coordinate **playback** on a separate transmitter
+(`demo-user@tx-host`). The payload travels through the **acoustic** channel.
 
-Proven live on remote TX `t11` → local mic:
+## Canonical conference config
 
-| Param | Value |
-|-------|-------|
-| f0 / f1 | **3500 / 7500 Hz** |
-| Symbol duration | **0.12 s** |
-| Modulation | **cpfsk** |
-| FEC | `none` or `hamming74` |
-| Amplitude | 0.25–0.28 |
-| Repeats | 2 |
+File: `configs/conference-audible-demo.yaml`
 
-Physical cal sweep (`output/calibration-audible-physical`, PHYSICAL_RX) peaked near **3750 Hz** and recommends **2000/3750** as MOST_RELIABLE under that sweep. Prefer the **proven live** 3500/7500 pair for stage reliability.
+| Field | Value |
+| --- | --- |
+| Modulation | CPFSK |
+| f0 / f1 | 3000 / 8000 Hz |
+| Symbol duration | 70 ms |
+| FEC | none (optional `hamming74`) |
+| Sync | soft_correlation |
+| Provenance | physically_validated_configuration (not universal) |
 
-### Fast audible (speed demo)
+Validation notes (state trial counts):
 
-Measured on the same remote-TX → local-mic path with payload `DEMO_DEMO_334` (PHYSICAL_RX):
+* **3/3** CRC-valid at 70 ms (`DEMO_DEMO_334`, 3000/8000, CPFSK)
+* Earlier **8/10** at 120 ms (3500/7500, CPFSK, remote TX → local mic)
+* **2/3** at 40 ms (aggressive; not default)
+* Near-US physical decode **not reliable** on tested hardware
 
-| Tsym | Carriers | Repeats | TX ≈ | Live trials |
-|------|----------|---------|------|-------------|
-| **0.07 s** | 3000 / 8000 Hz | 1 | ~11.8 s | **3/3 CRC VALID** ← recommended fast |
-| 0.08 s | 3000 / 8000 Hz | 1 | ~13.4 s | 2/2 (+ earlier single OK) |
-| 0.04 s | 3000 / 8000 Hz | 1 | ~6.7 s | 2/3 (aggressive / flaky) |
-| 0.05–0.06 s | 3000 / 8000 Hz | 1 | — | CRC failures in first sweep |
+## Recommended live commands
 
 ```bash
-# Fast path (~12 s airtime for DEMO_DEMO_334)
-python -m src.live_monitor --remote-tx nkn@192.168.68.109 \
+# Reliable audible (historical strong point)
+python -m src.live_monitor --remote-tx demo-user@tx-host \
+  --remote-output-device 1 --message DEMO-LAB-2027 --modulation cpfsk \
+  --symbol-duration 0.12 --frequency-zero 3500 --frequency-one 7500 \
+  --repeats 2 --amplitude 0.28
+
+# Fast audible (conference timing)
+python -m src.live_monitor --remote-tx demo-user@tx-host \
   --remote-output-device 1 --message DEMO_DEMO_334 --modulation cpfsk \
   --symbol-duration 0.07 --frequency-zero 3000 --frequency-one 8000 \
   --repeats 1 --amplitude 0.30
-
-# Aggressive (~7 s) — expect occasional CRC fail
-python -m src.live_monitor --remote-tx nkn@192.168.68.109 \
-  --remote-output-device 1 --message DEMO_DEMO_334 --modulation cpfsk \
-  --symbol-duration 0.04 --frequency-zero 3000 --frequency-one 8000 \
-  --repeats 1 --amplitude 0.30
 ```
 
-### Commands (reliable default)
+Same-host:
 
 ```bash
-# Live monitor — UI live; CRC decode after capture (~47s for DEMO-LAB-2027 ×2 @ 0.12s)
-python -m src.live_monitor --remote-tx nkn@192.168.68.109 \
-  --remote-output-device 1 --message DEMO-LAB-2027 --modulation cpfsk
-
-# Or stage wizard
-python -m src.stage_demo --wizard
-
-# Replay fallback
-python -m src.stage_demo --replay output/samples/replay/rx.wav --message HELLO
+python -m src.stage_demo --live --message DEMO_DEMO_334 --modulation cpfsk \
+  --config configs/conference-audible-demo.yaml
 ```
 
-## NEAR-ULTRASONIC (experimental / educational)
-
-Physical cal `output/calibration-near-us-physical` (PHYSICAL_RX) shows **low / negative estimated_detector_snr_db** across 15–21 kHz on this TX/RX pair. Do **not** promise a live near-US decode on stage.
-
-Use near-US for:
-
-1. Spectrogram / leakage comparison (`python -m src.signal_analysis compare-modulations`)
-2. Audible frequency-shifted preview of the same bits
-3. Honest slide: “hardware roll-off, not Nyquist”
-
-Optional experimental try (expect failure unless re-calibrated on site):
+## Verified physical replay
 
 ```bash
-python -m src.live_monitor --near-ultrasonic \
-  --frequency-zero 15750 --frequency-one 18000 \
-  --symbol-duration 0.20 --amplitude 0.10 \
-  --remote-tx nkn@192.168.68.109 --remote-output-device 1 \
-  --message HELLO
+python -m src.replay --input-wav output/samples/replay/rx.wav
+# or
+python -m src.stage_demo --replay output/samples/replay/rx.wav
 ```
 
-## Calibration artefacts
+## Simulation rehearsal
 
-| Path | Band | Provenance |
-|------|------|------------|
-| `output/samples/calibration-audible-physical/` | 2–10 kHz | PHYSICAL_RX |
-| `output/samples/calibration-near-us-physical/` | 15–21 kHz | PHYSICAL_RX |
+```bash
+python -m src.stage_demo --simulate --message DEMO-LAB-2027 --modulation cpfsk
+python -m src.stage_demo --wizard   # interactive; choose SIMULATION / LIVE / REPLAY
+```
 
-## Evidence campaigns
+## Campaign pointers
 
-- Remote audible CPFSK: `experiments/20260730T190041-remote-t11-tx-local-rx/` → **8/10**
-- Remote + Hamming: `experiments/20260730T192412-remote-cpfsk-hamming74/` → **4/4**
-- Fast `DEMO_DEMO_334` @ 0.07 s / 3–8 kHz → **3/3** (see table above)
+| Campaign | Trials | Result |
+| --- | --- | --- |
+| Remote audible 120 ms | 10 | 8/10 CRC VALID |
+| Remote + Hamming HELLO | 4 | 4/4 CRC VALID |
+| Fast 70 ms DEMO_DEMO_334 | 3 | 3/3 CRC VALID |
+| Fast 40 ms | 3 | 2/3 CRC VALID |
+| Near-US physical calibration | sweep | failure / weak SNR |
+
+Full rows: `docs/results-summary.md`.

@@ -184,20 +184,20 @@ def goertzel(
     frequency: float,
     sample_rate: int,
 ) -> float:
-    """Compute Goertzel power at *frequency* for a block of samples.
+    """Compute Goertzel power at an exact *frequency* (not integer-bin rounded).
 
-    Returns the squared magnitude of the DFT bin (energy proxy).
+    Uses ``omega = 2π f / fs`` so ±10–50 Hz neighbourhood searches remain
+    meaningful even when candidates share the same DFT bin index.
     """
     n = len(samples)
     if n == 0:
         return 0.0
-    k = int(round(frequency * n / sample_rate))
-    omega = 2.0 * np.pi * k / n
+    omega = 2.0 * np.pi * float(frequency) / float(sample_rate)
     coeff = 2.0 * np.cos(omega)
     s_prev = 0.0
     s_prev2 = 0.0
     for sample in samples:
-        s = sample + coeff * s_prev - s_prev2
+        s = float(sample) + coeff * s_prev - s_prev2
         s_prev2 = s_prev
         s_prev = s
     power = s_prev2 * s_prev2 + s_prev * s_prev - coeff * s_prev * s_prev2

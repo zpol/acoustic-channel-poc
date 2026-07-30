@@ -1,6 +1,6 @@
 {
   "provenance": "PHYSICAL_RX",
-  "tx": "remote-t11",
+  "tx": "remote-lab-tx (redacted)",
   "message": "HELLO",
   "success": true,
   "recovered": "HELLO",
