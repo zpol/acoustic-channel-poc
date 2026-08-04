@@ -23,8 +23,7 @@ Validation notes (state trial counts):
 * **3/3** CRC-valid at 70 ms (`DEMO_DEMO_334`, 3000/8000, CPFSK)
 * Earlier **8/10** at 120 ms (3500/7500, CPFSK, remote TX → local mic)
 * **2/3** at 40 ms (aggressive; not default)
-* Near-US physical decode **not reliable** on tested hardware
-
+* Near-US **calib** weak on tested hardware; **recovery profile** (15/16 kHz, 0.25 s, hamming74) has documented CRC-valid PHYSICAL_RX — see `docs/near-us-recovery-campaign.md` (not conference default)
 ## Recommended live commands
 
 ```bash

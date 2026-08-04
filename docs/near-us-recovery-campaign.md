@@ -15,10 +15,11 @@ From `output/samples/calibration-near-us-physical/` (PHYSICAL_RX):
 | BEST_COMPROMISE | 15000 / 16000 | ≈ −6.5 |
 | HIGHEST_FREQUENCY | 19750 / 20750 | ≈ −38.7 |
 
-Status: `weak_or_unusable` for live decode on that pair.
+Status (calib package): `weak_or_unusable` for treating the raw sweep as a robust modem band.
 
 Do **not** start recovery at 18500/19500 unless repeating a known-bad baseline.
 
+**Update (2026-08-04):** a slow recovery profile on **15000/16000 Hz** recovered CRC-valid PHYSICAL_RX frames (see Results log). That does **not** rewrite the calib SNR curve; it shows negative calib SNR ≠ “impossible under every profile”.
 ## Config
 
 Canonical starting point: [`configs/near-us-recovery.yaml`](../configs/near-us-recovery.yaml)

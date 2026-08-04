@@ -28,8 +28,9 @@ receiver, live_monitor, experiment, replay, stage_demo).
 * Audible remote TX → local RX: **8/10** CRC-valid (CPFSK, 3500/7500 Hz, 0.12 s).
 * Hamming(7,4) HELLO: **4/4** CRC-valid (small N).
 * Fast audible `DEMO_DEMO_334`: **3/3** at 70 ms (3000/8000); **2/3** at 40 ms.
-* Near-US physical calibration: weak/negative detector SNR — **decode not reliable**.
-* Curated verified capture: `output/samples/replay/rx.wav` (+ `.meta.json`, SHA-256 locked).
+* Near-US physical calibration: weak/negative detector SNR on the 15–21 kHz sweep.
+* Near-US recovery profile (15/16 kHz, 0.25 s, hamming74×2): documented CRC-valid PHYSICAL_RX recoveries — see `docs/near-us-recovery-campaign.md` and `output/article-part2/` (small N; not a universal reliability claim).
+* Curated verified audible capture: `output/samples/replay/rx.wav` (+ `.meta.json`, SHA-256 locked).
 
 ## Current simulated / generated evidence
 

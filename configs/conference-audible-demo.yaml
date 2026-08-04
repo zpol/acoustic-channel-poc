@@ -16,4 +16,4 @@ notes:
   - Validated on the documented laboratory hardware (remote TX speakers → local mic).
   - Recalibration is required for different hardware or rooms.
   - Not universally reliable; small trial counts must be stated with results.
-  - Near-ultrasonic physical decode was not reliable on the same hardware pair.
+  - Near-ultrasonic calibration on the same hardware pair was weak; a separate slow recovery profile later recovered CRC-valid frames (see docs/near-us-recovery-campaign.md). Not the conference default.

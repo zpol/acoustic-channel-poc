@@ -271,10 +271,18 @@ experiments identified faster working configurations, including
 configuration-dependent. Do not generalize small trial counts into
 universal reliability percentages.
 
-Near-ultrasonic generation works digitally; **physical near-ultrasonic
-decoding was not reliable** on the tested speaker/microphone pair
-(measured detector SNR mostly negative). A 48 kHz Nyquist limit does not
-guarantee usable physical response near 24 kHz.
+Near-ultrasonic generation works digitally. Physical **calibration** on
+the tested speaker/microphone pair showed mostly **negative**
+`estimated_detector_snr_db` in the 15–21 kHz sweep — a 48 kHz Nyquist
+limit does not guarantee usable transducer response near 24 kHz.
+
+A later **recovery profile** on the same path (CPFSK **15000/16000 Hz**,
+Tsym **0.25 s**, Hamming(7,4), repeats **2**, carrier neighbourhood search)
+did recover CRC-valid frames for documented synthetic payloads
+(`HELLO`, and the payload campaign in
+`output/samples/experiment-summaries/20260804-nearus-payloads/`). That is
+**not** a large-N reliability claim and does not erase the weak calib curve.
+See `docs/near-us-recovery-campaign.md` and `output/article-part2/`.
 
 ## Visualizations
 
@@ -368,7 +376,8 @@ Tips for higher live success rate:
 * Hamming(7,4) produced promising results in small trial sets (**4/4** HELLO with FEC in one campaign). Syndrome corrections are attempts — **CRC remains the trust decision**.
 * Faster configurations were identified (**3/3** at 70 ms; **2/3** at 40 ms for `DEMO_DEMO_334`).
 * Near-ultrasonic generation works digitally.
-* Near-ultrasonic physical decoding was **not reliable** on the tested speaker and microphone combination.
+* Near-US **calibration** on the tested pair: weak/negative detector SNR (15–21 kHz sweep).
+* Near-US **recovery profile** (15/16 kHz, slow symbols + FEC + search): documented CRC-valid PHYSICAL_RX recoveries — see campaign docs; not a universal reliability percentage.
 * The 48 kHz Nyquist limit does **not** guarantee usable physical response near 24 kHz.
 
 See `docs/results-summary.md` and `docs/article-evidence-manifest.md`.

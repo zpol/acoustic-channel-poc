@@ -24,7 +24,8 @@ Never treat a generated spectrogram as evidence of successful physical transmiss
 | `turbo_80ms_*` | GENERATED_TX / SIMULATED_RX | BFSK turbo | Simulated | Yes — label as simulated |
 | `near_us_HELLO_*` | GENERATED_TX | near-US carriers | Digital TX only | Yes — generation works digitally |
 | `calibration-audible-physical/` | PHYSICAL_RX | sweep 2–10 kHz | Response measured | Yes — audible hardware response |
-| `calibration-near-us-physical/` | PHYSICAL_RX | sweep 15–21 kHz | Weak / negative detector SNR | Yes — near-US failure evidence |
+| `calibration-near-us-physical/` | PHYSICAL_RX | sweep 15–21 kHz | Weak / negative detector SNR | Yes — near-US **calib** weakness (not the full recovery story) |
+| `experiment-summaries/20260804-nearus-payloads/` | PHYSICAL_RX | CPFSK 15/16 kHz recovery | CRC VALID documented payloads | Yes — cite M/N from summary |
 | `replay/rx.wav` (+ `rx.wav.meta.json`) | PHYSICAL_RX | CPFSK 3500/7500, 0.12 s, FEC none | CRC VALID (`HELLO`) | Yes — verified physical capture |
 | `replay/tx.wav` | GENERATED_TX | matching TX | N/A | Yes — pair with RX, do not call physical |
 | `experiment-summaries/` | PHYSICAL_RX / SIMULATED summaries | various | campaign-dependent | Yes — cite trial counts |
@@ -47,9 +48,9 @@ Never treat a generated spectrogram as evidence of successful physical transmiss
 ### `calibration-near-us-physical/`
 
 * PHYSICAL_RX near-ultrasonic sweep (~15–21 kHz).
-* Demonstrates **failure / weak response** on the tested speaker–microphone chain.
-* Do not claim near-ultrasonic communication succeeded.
-
+* Demonstrates **weak detector response** on the tested speaker–microphone chain.
+* Do **not** claim that this sweep alone proves live decode is impossible; recovery used a separate slow profile (see `docs/near-us-recovery-campaign.md` and `experiment-summaries/20260804-nearus-payloads/`).
+* Do **not** treat GENERATED_TX near-US spectrograms as physical success.
 ### `replay/`
 
 * Verified PHYSICAL_RX capture (`HELLO`, CPFSK, 3500/7500 Hz, 0.12 s, FEC none).

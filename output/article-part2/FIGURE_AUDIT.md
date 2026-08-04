@@ -90,17 +90,12 @@ figures/fig02-generated-tx-only-18500-19500-NOT-PHYSICAL.{png,svg}
 
 ## Unsupported claims
 
-Claims in current draft/docs that are **not** supported as written after the 2026-08-04 recovery campaign:
+Previously flagged “exclusively negative near-US” wording in README / results-summary / Part 2 draft was **corrected** after the 2026-08-04 recovery campaign (calib weakness kept; recovery-profile CRC VALID documented). Remaining open items:
 
-| Source | Claim (paraphrased) | Problem |
+| Source | Claim (paraphrased) | Status |
 | --- | --- | --- |
-| `docs/blog-part2-nyquist-meets-hardware.md` ~L210 | Usable ceiling is audible, not near-US | Recovery later obtained CRC VALID at 15/16 kHz with slow symbols + FEC. Calib weakness remains true; “usable ceiling only audible” overstates. |
-| Same draft ~L334 | “Part 2 stops at an honest negative for near-US” | Outdated: recovery campaign succeeded for documented payloads. |
-| `README.md` / `docs/results-summary.md` | Near-US live decode “not reliable” | Needs nuance: early/default near-US attempts and calib were weak; recovery profile documented successes (not a large-N reliability study). |
-| Any implication that calibration negative SNR proves live decode is impossible | Contradicted by HELLO + payload PHYSICAL_RX CRC VALID trials | Keep calib as failure of *that* metric/setup; separate from recovery campaign. |
-| FIG-02 as physical proof of 18.5/19.5 behaviour | No paired PHYSICAL_RX | Do not publish as physical evidence. |
-| “100% reliable” or large trial counts | Not in evidence | Documented exact matches after quote fix: **4/4** intended strings in the payload campaign summary; HELLO N=1 in preserved log. |
-
+| FIG-02 as physical proof of 18.5/19.5 behaviour | No paired PHYSICAL_RX | Still open (`MISSING_PHYSICAL_EVIDENCE`) |
+| “100% reliable” near-US or large trial counts | Not in evidence | Still unsupported — publish M/N only |
 ## Publication minimum
 
 | Required | Available? | Status |

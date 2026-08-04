@@ -77,9 +77,9 @@ Every item states provenance and what it does **not** demonstrate.
 **Path:** `output/article/06-physical-near-ultrasonic-response.png`  
 **Provenance:** PHYSICAL_RX  
 **Demonstrates:** Weak / negative detector SNR in the near-US band on this hardware.  
-**Does not demonstrate:** Successful near-ultrasonic communication.  
+**Does not demonstrate:** That the calib sweep alone is a robust modem band; also does not document the later recovery-profile CRC VALID trials.  
 **Suggested section:** When Nyquist Meets Real Hardware  
-**Suggested caption:** Near-ultrasonic physical response on the tested hardware (decode not reliable).  
+**Suggested caption:** Near-ultrasonic physical **calibration** response on the tested hardware (weak/negative detector SNR; separate from later recovery-profile results).  
 **Publication status:** Ready  
 **Source:** `output/samples/calibration_near_us.png`
 
@@ -209,9 +209,9 @@ Every item states provenance and what it does **not** demonstrate.
 **Path:** `output/article/14-audible-vs-near-us-calibration.png`  
 **Provenance:** PHYSICAL_RX  
 **Demonstrates:** Detector-SNR curves for 2–10 kHz vs 15–21 kHz on the same lab path.  
-**Does not demonstrate:** Universal laptop response or successful near-US decode.  
+**Does not demonstrate:** Universal laptop response; by itself it also does not document the later recovery-profile CRC VALID trials.  
 **Suggested section:** Part 2 — When Nyquist Meets Real Hardware  
-**Suggested caption:** Audible-band probes can show positive detector SNR; the near-US sweep stays weak or negative.  
+**Suggested caption:** Audible-band probes can show positive detector SNR; the near-US sweep stays weak or negative. Recovery used a different, slower profile — see campaign docs.  
 **Publication status:** Ready
 
 ---
@@ -220,10 +220,10 @@ Every item states provenance and what it does **not** demonstrate.
 
 | Draft | Path | Status |
 | --- | --- | --- |
-| Part 2 (Nyquist / near-US failure) | `docs/blog-part2-nyquist-meets-hardware.md` | Ready for Medium paste |
-| Near-US recovery campaign | `docs/near-us-recovery-campaign.md` | Lab plan |
+| Part 2 (Nyquist / near-US calib + recovery) | `docs/blog-part2-nyquist-meets-hardware.md` | Draft updated for recovery campaign |
+| Near-US recovery campaign | `docs/near-us-recovery-campaign.md` | Results logged (2026-08-04) |
 | Alternative channels | `docs/alternative-physical-channels.md` | Lab plan |
-
+| Part 2 figure audit | `output/article-part2/FIGURE_AUDIT.md` | Figures generated |
 ---
 
 ## Additional curated paths

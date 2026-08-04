@@ -1,9 +1,9 @@
-# When Nyquist Meets Real Hardware: Why the Near-Ultrasonic Channel Failed
+# When Nyquist Meets Real Hardware: Why Near-Ultrasonic Failed First
 
 **Blog draft — Part 2**  
 Companion to [Part 1](https://medium.com/@keyboardsamurai007/no-network-required-building-an-acoustic-data-channel-with-python-for-data-exfil-part-1-02c3798a033c)  
 Repository: https://github.com/zpol/acoustic-channel-poc/  
-Draft git baseline: `ce57441` (update on publish)
+Draft git baseline: `22543f2` (update on publish)
 
 ---
 
@@ -19,10 +19,9 @@ The natural follow-up question is the one every demo audience asks:
 
 At a sample rate of 48 kHz, the mathematical Nyquist frequency is 24 kHz. On paper, carriers at 18, 19, or even 20 kHz look comfortable.
 
-Our physical tests showed why that paper comfort is misleading.
+Our physical tests showed why that paper comfort is misleading — and what it took to recover a usable near-ultrasonic profile afterward.
 
-This part is about the gap between **digital possibility** and **transducer reality**.
-
+This part is about the gap between **digital possibility** and **transducer reality**, then the slower recovery path that still stayed honest about trial counts.
 ---
 
 ## A deliberately limited question
@@ -205,10 +204,11 @@ Typical failure modes we observed or must assume on this class of hardware:
 
 Nyquist tells you the digital ceiling.
 
-The speaker and microphone tell you the usable ceiling.
+The speaker and microphone tell you the usable ceiling **for a given profile**.
 
-On this tested pair, the usable ceiling for a robust data channel was in the **audible** region — not the near-ultrasonic edge.
+On this tested pair, **fast / theory-driven near-US settings** (especially classic 18.5/19.5 kHz thinking and the raw calibration curve) looked unusable. The **audible** band remained the easy, robust story from Part 1.
 
+That does **not** mean every near-US attempt must fail. A later recovery profile — lower carriers from the least-bad calib points, much longer symbols, FEC, repeats, and carrier neighbourhood search — recovered CRC-valid frames on the same hardware class. The lesson is that **hardware response, not Nyquist**, sets the operating point.
 ---
 
 ## Audible leakage and the myth of automatic stealth
@@ -248,7 +248,7 @@ Physically, laptop speakers and microphones are often **worse** at infrasound th
 
 So infrasound is an interesting research question for specialized sensors — not a free upgrade path for the same laptop PoC.
 
-We keep it on the list of **alternative physical channels** to probe later (with honest negative results if the hardware cannot radiate or capture it). It is not a shortcut around the near-US failure.
+We keep it on the list of **alternative physical channels** to probe later (with honest negative results if the hardware cannot radiate or capture it). It is not a shortcut around a weak near-US calibration curve.
 
 ---
 
@@ -289,10 +289,11 @@ Fast DEMO_DEMO_334 @ 70 ms, 3000/8000 Hz:     3/3
 
 Those counts are small. They are still **physical successes** with provenance.
 
-Near-ultrasonic calibration on the same class of path did not produce a comparable success story.
+Near-ultrasonic **calibration** on the same class of path did not produce a comparable success story by itself: detector SNR stayed weak or negative across 15–21 kHz.
 
-That contrast is the point of Part 2.
+That contrast — audible CRC VALID vs a grim near-US calib curve — is the first half of Part 2.
 
+The second half is recovery: after choosing 15/16 kHz from the least-bad calib ranking and slowing the modem, the same path produced documented PHYSICAL_RX CRC VALID frames (see below). Calib failure and recovery success are both true; they answer different questions.
 ---
 
 ## Reproducible evidence in the repository
@@ -327,19 +328,66 @@ Verified audible physical replay (from Part 1):
 python -m src.replay --input-wav output/samples/replay/rx.wav
 ```
 
+Part 2 figure pack (recovery narrative):
+
+```
+output/article-part2/
+  FIGURE_AUDIT.md
+  figures/fig01-… fig12-…
+```
+
+---
+
+## Near-US recovery (same hardware class, slower profile)
+
+Calibration said “weak”. It did not say “impossible under every parameter”.
+
+Documented recovery profile (`configs/near-us-recovery.yaml`):
+
+```
+Carrier 0:       15000 Hz
+Carrier 1:       16000 Hz
+Symbol duration: 0.25 s
+Modulation:      CPFSK
+FEC:             Hamming(7,4)
+Repeats:         2
+Amplitude:       0.30
+Carrier search:  approximately ±150 Hz
+Band-pass:       off
+Provenance:      PHYSICAL_RX
+```
+
+Documented outcomes (small N — state the fractions, never invent “100% reliable”):
+
+```
+HELLO                         1/1 CRC VALID (exact)
+user@domain.tld               CRC VALID (exact)
+demo_sinclair_2000            CRC VALID (exact)
+this_is_working!!!            CRC VALID (exact)
+p4$$w0rd (before quote fix)   CRC VALID for shell-expanded TX input
+p4$$w0rd (after shlex.quote)  CRC VALID (exact)
+```
+
+SSH coordinated playback only; the payload crossed the room as sound.
+Summary: `output/samples/experiment-summaries/20260804-nearus-payloads/summary.md`
+
 ---
 
 ## What we will try next
 
-Part 2 stops at an honest negative for near-US on the **tested** speaker/microphone combination.
+Part 2 no longer ends only on the calib negative. The honest arc is:
 
-We are not done experimenting.
+1. Theory-driven near-US looked fine digitally.
+2. Physical calibration on this laptop path looked weak.
+3. A recovery profile still recovered CRC-valid frames — slowly, with FEC and search.
+4. Classic 18.5/19.5 kHz remains poorly evidenced here (no paired PHYSICAL_RX for that TX in the figure audit).
 
-Next work (documented in the repo, for a later article if results justify it):
+Further work (documented in the repo):
 
-1. **Near-US recovery campaign** — use the *least bad* calibrated carriers (e.g. 15/16 kHz), much longer symbols, FEC, repeats, and search — before claiming the band is impossible on this host.
-2. **Hardware swaps** — different microphone, external DAC/speaker, another laptop — each as a separate campaign.
-3. **Alternative transducers** — PC motherboard beeper (if present), piezo/buzzer, and carefully scoped sister ideas (including infrasound probes where the hardware allows measurement).
+1. Hardware swaps — different microphone, external DAC/speaker, another laptop — each as a separate campaign.
+2. Larger-N trials for the recovery profile (publish M/N, not vibes).
+3. Alternative transducers — PC motherboard beeper (if present), piezo/buzzer, and carefully scoped sister ideas (including infrasound probes where the hardware allows measurement).
+4. Optional: paired GENERATED_TX + PHYSICAL_RX spectrograms at 18.5/19.5 kHz for FIG-02.
 
 Success will still mean:
 
@@ -350,7 +398,6 @@ CRC VALID
 with an explicit trial count and a provenance label.
 
 Failure will still be published as failure.
-
 ---
 
 ## Closing
@@ -359,7 +406,7 @@ Nyquist is a property of sampling.
 
 Speakers and microphones are properties of the physical world.
 
-Between them sits the entire audio stack — and that is where near-ultrasonic laptop channels often die.
+Between them sits the entire audio stack — and that is where near-ultrasonic laptop channels often die **when you ignore the transducers**.
 
 The interesting lesson is not that ultrasound is impossible.
 
@@ -367,7 +414,7 @@ It is that **a clean digital waveform at 19 kHz is not evidence**.
 
 The room, the cone, and the capsule get a vote.
 
-On our tested hardware, they voted no.
+On our tested hardware, they voted **no** for naive near-US settings and a grim calibration curve — and **yes**, later, for a slow 15/16 kHz recovery profile with documented CRC-valid PHYSICAL_RX frames.
 
 ---
 
@@ -375,9 +422,9 @@ On our tested hardware, they voted no.
 
 Still missing for richer illustration (do not fabricate):
 
-- [ ] Live-monitor screenshot with CRC VALID (PHYSICAL_RX) — suggested: `output/screenshots/live_monitor_crc_valid.png`
+- [x] Live-monitor terminal evidence with CRC VALID (PHYSICAL_RX) — see `output/article-part2/figures/fig05-hello-crc-valid-physical-rx.png`
 - [ ] Lab setup photograph — suggested: `output/screenshots/physical-lab-setup.jpg`
-- [ ] Optional: one failed near-US live attempt log + spectrogram labelled PHYSICAL_RX
+- [ ] Optional: paired GENERATED_TX vs PHYSICAL_RX at 18.5/19.5 kHz (FIG-02 still `MISSING_PHYSICAL_EVIDENCE`)
 
 Suggested capture commands (authorized lab only):
 
@@ -388,7 +435,7 @@ python -m src.live_monitor --remote-tx demo-user@tx-host \
   --symbol-duration 0.07 --frequency-zero 3000 --frequency-one 8000 \
   --repeats 1 --amplitude 0.30
 
-# Near-US recovery probe (experimental; expect possible failure)
+# Near-US recovery profile (documented success path; still hardware-specific)
 python -m src.live_monitor --remote-tx demo-user@tx-host \
   --remote-output-device 1 --message HELLO --modulation cpfsk \
   --near-ultrasonic --fec hamming74 \
@@ -401,3 +448,4 @@ See also:
 - `docs/near-us-recovery-campaign.md`
 - `docs/alternative-physical-channels.md`
 - `configs/near-us-recovery.yaml`
+- `output/article-part2/FIGURE_AUDIT.md`
