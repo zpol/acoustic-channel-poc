@@ -1,0 +1,6 @@
+expected,tx_input,recovered,crc,exact_match,trial_id,provenance,wav,wav_sha256,notes
+user@domain.tld,user@domain.tld,user@domain.tld,CRC VALID,True,20260804T200528_user@domain.tld_,PHYSICAL_RX,output/lab_nearus_payloads/20260804T200528_user@domain.tld_.wav,a520c9c6e351edb1572ba9961c1ba4022c68ed855d135791a394d06e95c73fc4,
+demo_sinclair_2000,demo_sinclair_2000,demo_sinclair_2000,CRC VALID,True,20260804T201103_demo_sinclair_2000_,PHYSICAL_RX,output/lab_nearus_payloads/20260804T201103_demo_sinclair_2000_.wav,fede667672bf2deb25e7010e32cd5272cf20000ed5675dad4e3003139e222cb4,
+this_is_working!!!,this_is_working!!!,this_is_working!!!,CRC VALID,True,20260804T201521_this_is_working!!!_,PHYSICAL_RX,output/lab_nearus_payloads/20260804T201521_this_is_working!!!_.wav,dd0c43d649a44f62e8be4a1f668447b80c9f30504d0fe3a8e7defe71150a69a7,
+p4$$w0rd,p4<PID>w0rd (remote shell expanded $$),p41068552w0rd,CRC VALID,False,20260804T200144_p4$$w0rd_,PHYSICAL_RX,output/lab_nearus_payloads/20260804T200144_p4$$w0rd_.wav,7d31f350031a16ddb0f5e790285343720475eb27df5e2ccff6a2c6a61e3261d3,Before shlex.quote; CRC matches transmitted modified string
+p4$$w0rd,p4$$w0rd,p4$$w0rd,CRC VALID,True,20260804T202412_p4dollars_retry,PHYSICAL_RX,output/lab_nearus_payloads/20260804T202412_p4dollars_retry.wav,14ef5a0f4155b13b162cff8269b43b052bbce75c6e3f61068fb320398afbbb6a,After shlex.quote fix

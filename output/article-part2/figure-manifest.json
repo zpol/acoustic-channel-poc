@@ -1,0 +1,427 @@
+{
+  "generated_at": "2026-08-04T19:43:46.219897+00:00",
+  "git_head": "8bdc9be3b125c65d9d8ad67e98ef5f31b2216eab",
+  "figures": [
+    {
+      "figure_id": "FIG-01",
+      "title": "Audible vs near-US calibration",
+      "output_files": [
+        "output/article-part2/figures/fig01-audible-vs-near-us-calibration.png",
+        "output/article-part2/figures/fig01-audible-vs-near-us-calibration.svg",
+        "output/article-part2/figures/fig01-source-14-audible-vs-near-us-calibration.png"
+      ],
+      "status": "GENERATED_FROM_REAL_DATA",
+      "provenance": [
+        "PHYSICAL_RX"
+      ],
+      "source_files": [
+        "output/samples/calibration-audible-physical/measurements.csv",
+        "output/samples/calibration-near-us-physical/measurements.csv",
+        "output/article/14-audible-vs-near-us-calibration.png"
+      ],
+      "source_sha256": [
+        "35e89acab00c6420c6bd4472b787bb1b8f551f873b7ba2b9d98bc051c5f9465c",
+        "e15279d3b2873285e25dfc0743e0acc07890605f894bb26703640063182ac4fb",
+        "52668f98f5b289703017b2d7d4b842a7208a94843540d07e5afb7bc8e3a66822"
+      ],
+      "generator_script": "scripts/article/generate_part2_figures.py",
+      "command": "PYTHONPATH=. python scripts/article/generate_part2_figures.py --figure FIG-01",
+      "parameters": {
+        "metric": "estimated_detector_snr_db"
+      },
+      "trial_ids": [
+        "calibration-audible-physical",
+        "calibration-near-us-physical"
+      ],
+      "claims_supported": [
+        "Audible-band detector SNR can be positive on tested path",
+        "15\u201321 kHz sweep shows low/negative estimated_detector_snr_db"
+      ],
+      "limitations": [
+        "Not calibrated SPL",
+        "Hardware/room specific",
+        "Original PNG 14-* also archived as source copy"
+      ],
+      "contains_redactions": false,
+      "prior_status_note": "EXISTS_READY"
+    },
+    {
+      "figure_id": "FIG-02",
+      "title": "Generated 18.5/19.5 kHz versus physical recording",
+      "output_files": [
+        "output/article-part2/figures/fig02-generated-tx-only-18500-19500-NOT-PHYSICAL.png",
+        "output/article-part2/figures/fig02-generated-tx-only-18500-19500-NOT-PHYSICAL.svg"
+      ],
+      "status": "MISSING_PHYSICAL_EVIDENCE",
+      "provenance": [
+        "GENERATED_TX"
+      ],
+      "source_files": [
+        "output/samples/near_us_HELLO_tx.wav"
+      ],
+      "source_sha256": [
+        "3049451fe70348aaf57a868abe7de367558aeeca21fad35b8934f9a83be66fd6"
+      ],
+      "generator_script": "scripts/article/generate_part2_figures.py",
+      "command": "N/A \u2014 not generated (no linkable PHYSICAL_RX for same trial)",
+      "parameters": {
+        "intended_carriers_hz": [
+          18500,
+          19500
+        ]
+      },
+      "trial_ids": [],
+      "claims_supported": [],
+      "limitations": [
+        "near_us_HELLO_tx.wav is GENERATED_TX only",
+        "No PHYSICAL_RX WAV documented as the matching microphone capture of that TX",
+        "Do not pair with calibration sweep RX"
+      ],
+      "contains_redactions": false,
+      "missing_requirement": "Record PHYSICAL_RX while playing a documented 18500/19500 TX (or save metadata linking TX+RX hashes), then regenerate FIG-02",
+      "notes": "Partial GENERATED_TX export for reference only; full two-panel FIG-02 blocked"
+    },
+    {
+      "figure_id": "FIG-03",
+      "title": "Physical response 15\u201321 kHz",
+      "output_files": [
+        "output/article-part2/figures/fig03-physical-frequency-response-15k-21k.png",
+        "output/article-part2/figures/fig03-physical-frequency-response-15k-21k.svg"
+      ],
+      "status": "GENERATED_FROM_REAL_DATA",
+      "provenance": [
+        "PHYSICAL_RX"
+      ],
+      "source_files": [
+        "output/samples/calibration-near-us-physical/measurements.csv"
+      ],
+      "source_sha256": [
+        "e15279d3b2873285e25dfc0743e0acc07890605f894bb26703640063182ac4fb"
+      ],
+      "generator_script": "scripts/article/generate_part2_figures.py",
+      "command": "PYTHONPATH=. python scripts/article/generate_part2_figures.py --figure FIG-03",
+      "parameters": {
+        "metric": "estimated_detector_snr_db",
+        "highlight_hz": [
+          15000,
+          16000,
+          18500,
+          19500
+        ]
+      },
+      "trial_ids": [
+        "calibration-near-us-physical"
+      ],
+      "claims_supported": [
+        "15/16 kHz were later selected for recovery; detector SNR still negative at calib time",
+        "18.5/19.5 kHz were weaker theory-driven candidates on this sweep"
+      ],
+      "limitations": [
+        "Calib SNR does not by itself prove later CRC-valid live decode"
+      ],
+      "contains_redactions": false
+    },
+    {
+      "figure_id": "FIG-04",
+      "title": "Carrier-neighborhood receiver search",
+      "output_files": [
+        "output/article-part2/figures/fig04-carrier-neighborhood-search.png",
+        "output/article-part2/figures/fig04-carrier-neighborhood-search.svg"
+      ],
+      "status": "GENERATED_FROM_REAL_DATA",
+      "provenance": [],
+      "source_files": [
+        "configs/near-us-recovery.yaml",
+        "docs/near-us-recovery-campaign.md"
+      ],
+      "source_sha256": [],
+      "generator_script": "scripts/article/generate_part2_figures.py",
+      "command": "PYTHONPATH=. python scripts/article/generate_part2_figures.py --figure FIG-04",
+      "parameters": {
+        "f0": 15000,
+        "f1": 16000,
+        "search_hz": 150,
+        "step_hz": 25
+      },
+      "trial_ids": [],
+      "claims_supported": [
+        "Receiver can search a configurable neighbourhood around nominal carriers"
+      ],
+      "limitations": [
+        "Diagram is explanatory; envelope is illustrative, not measured energy from a WAV"
+      ],
+      "contains_redactions": false,
+      "diagram_type": "explanatory"
+    },
+    {
+      "figure_id": "FIG-05",
+      "title": "First HELLO physical recovery",
+      "output_files": [
+        "output/article-part2/figures/fig05-hello-crc-valid-physical-rx.png"
+      ],
+      "status": "GENERATED_FROM_REAL_DATA",
+      "provenance": [
+        "PHYSICAL_RX"
+      ],
+      "source_files": [
+        "output/article-part2/evidence/hello_nua_terminal_redacted.log",
+        "output/lab_nua_HELLO_20260804T195738.wav"
+      ],
+      "source_sha256": [
+        "cb0c877907c42839c45c951af07516131b95585f7e55587fc6c82ea10eeea5ee",
+        "292af30db7f1caaf4156a370d882775a477117ca6b5ea07bd1d244758a4e6feb"
+      ],
+      "generator_script": "scripts/article/generate_part2_figures.py",
+      "command": "PYTHONPATH=. python scripts/article/generate_part2_figures.py --figure FIG-05",
+      "parameters": {
+        "carriers_hz": [
+          15000,
+          16000
+        ],
+        "payload": "HELLO",
+        "crc": "VALID"
+      },
+      "trial_ids": [
+        "lab_nua_HELLO_20260804T195738"
+      ],
+      "claims_supported": [
+        "PHYSICAL_RX decode of HELLO with CRC VALID at 15/16 kHz profile"
+      ],
+      "limitations": [
+        "Single documented trial in preserved log (N=1 for this HELLO capture)",
+        "Terminal image is a rendering of the redacted log, not a live screenshot"
+      ],
+      "contains_redactions": true
+    },
+    {
+      "figure_id": "FIG-06",
+      "title": "Exact recovered payloads",
+      "output_files": [
+        "output/article-part2/figures/fig06-physical-payload-results.png",
+        "output/article-part2/figures/fig06-physical-payload-results.svg",
+        "output/article-part2/figures/fig06-physical-payload-results.csv"
+      ],
+      "status": "GENERATED_FROM_REAL_DATA",
+      "provenance": [
+        "PHYSICAL_RX"
+      ],
+      "source_files": [
+        "output/lab_nearus_payloads/20260804T200528_user@domain.tld_.wav",
+        "output/lab_nearus_payloads/20260804T201103_demo_sinclair_2000_.wav",
+        "output/lab_nearus_payloads/20260804T201521_this_is_working!!!_.wav",
+        "output/lab_nearus_payloads/20260804T200144_p4$$w0rd_.wav",
+        "output/lab_nearus_payloads/20260804T202412_p4dollars_retry.wav",
+        "output/samples/experiment-summaries/20260804-nearus-payloads/summary.md"
+      ],
+      "source_sha256": [
+        "a520c9c6e351edb1572ba9961c1ba4022c68ed855d135791a394d06e95c73fc4",
+        "fede667672bf2deb25e7010e32cd5272cf20000ed5675dad4e3003139e222cb4",
+        "dd0c43d649a44f62e8be4a1f668447b80c9f30504d0fe3a8e7defe71150a69a7",
+        "7d31f350031a16ddb0f5e790285343720475eb27df5e2ccff6a2c6a61e3261d3",
+        "14ef5a0f4155b13b162cff8269b43b052bbce75c6e3f61068fb320398afbbb6a",
+        "866ca49016a65528ac4c616418870ff57a4f9517492a63c3a03f2ef68ff588b9"
+      ],
+      "generator_script": "scripts/article/generate_part2_figures.py",
+      "command": "PYTHONPATH=. python scripts/article/generate_part2_figures.py --figure FIG-06",
+      "parameters": {
+        "documented_trials": 5
+      },
+      "trial_ids": [
+        "20260804T200528_user@domain.tld_",
+        "20260804T201103_demo_sinclair_2000_",
+        "20260804T201521_this_is_working!!!_",
+        "20260804T200144_p4$$w0rd_",
+        "20260804T202412_p4dollars_retry"
+      ],
+      "claims_supported": [
+        "Four intended payloads recovered exactly after quoting fix",
+        "One pre-fix trial CRC-validated a shell-expanded transmitter input"
+      ],
+      "limitations": [
+        "Trial counts are the documented runs in summary.md / WAVs (not a large-N study)",
+        "WAV files currently under output/lab_nearus_payloads (local lab dumps)"
+      ],
+      "contains_redactions": false
+    },
+    {
+      "figure_id": "FIG-07",
+      "title": "Shell quoting bug",
+      "output_files": [
+        "output/article-part2/figures/fig07-shell-quoting-before-after.png",
+        "output/article-part2/figures/fig07-shell-quoting-before-after.svg"
+      ],
+      "status": "GENERATED_FROM_REAL_DATA",
+      "provenance": [
+        "PHYSICAL_RX"
+      ],
+      "source_files": [
+        "output/lab_nearus_payloads/results_20260804T200144.md",
+        "src/live_monitor.py",
+        "src/experiment.py"
+      ],
+      "source_sha256": [
+        "866ca49016a65528ac4c616418870ff57a4f9517492a63c3a03f2ef68ff588b9",
+        "b23f5a2d418c980c5d5953451be645e1913e3d0407b79095ebe8ab1575c4bfc3",
+        "74048b5a5c4770d1b211cc1a0d332d7fdc86cbc93badbc40f788091fb93038b1"
+      ],
+      "generator_script": "scripts/article/generate_part2_figures.py",
+      "command": "PYTHONPATH=. python scripts/article/generate_part2_figures.py --figure FIG-07",
+      "parameters": {
+        "fix_commit": "8bdc9be"
+      },
+      "trial_ids": [
+        "20260804T200144_p4$$w0rd_",
+        "20260804T202412_p4dollars_retry"
+      ],
+      "claims_supported": [
+        "Pre-fix trial recovered a PID-substituted string with CRC VALID",
+        "Post-fix trial recovered exact p4$$w0rd with CRC VALID"
+      ],
+      "limitations": [
+        "Diagram summarizes documented outcomes; exact PID value comes from that trial's recovered string"
+      ],
+      "contains_redactions": false
+    },
+    {
+      "figure_id": "FIG-08",
+      "title": "Successful physical spectrogram (HELLO)",
+      "output_files": [
+        "output/article-part2/figures/fig08-successful-physical-rx-spectrogram.png",
+        "output/article-part2/figures/fig08-successful-physical-rx-spectrogram.svg"
+      ],
+      "status": "GENERATED_FROM_REAL_DATA",
+      "provenance": [
+        "PHYSICAL_RX"
+      ],
+      "source_files": [
+        "output/lab_nua_HELLO_20260804T195738.wav"
+      ],
+      "source_sha256": [
+        "292af30db7f1caaf4156a370d882775a477117ca6b5ea07bd1d244758a4e6feb"
+      ],
+      "generator_script": "scripts/article/generate_part2_figures.py",
+      "command": "PYTHONPATH=. python scripts/article/generate_part2_figures.py --figure FIG-08",
+      "parameters": {
+        "excerpt_start_s": 2.0,
+        "excerpt_len_s": 25,
+        "nfft": 4096
+      },
+      "trial_ids": [
+        "lab_nua_HELLO_20260804T195738"
+      ],
+      "claims_supported": [
+        "Physical capture of HELLO recovery trial contains energy near 15/16 kHz region"
+      ],
+      "limitations": [
+        "Spectrogram excerpt timing is approximate (not sample-accurate frame bounds)",
+        "Peak sample magnitude was high (~0.92); possible compression/clipping effects"
+      ],
+      "contains_redactions": false
+    },
+    {
+      "figure_id": "FIG-09",
+      "title": "Experimental architecture",
+      "output_files": [
+        "output/article-part2/figures/fig09-experimental-architecture.png",
+        "output/article-part2/figures/fig09-experimental-architecture.svg"
+      ],
+      "status": "GENERATED_FROM_REAL_DATA",
+      "provenance": [],
+      "source_files": [
+        "docs/near-us-recovery-campaign.md"
+      ],
+      "source_sha256": [],
+      "generator_script": "scripts/article/generate_part2_figures.py",
+      "command": "PYTHONPATH=. python scripts/article/generate_part2_figures.py --figure FIG-09",
+      "parameters": {},
+      "trial_ids": [],
+      "claims_supported": [
+        "SSH coordinated playback only; payload path is acoustic"
+      ],
+      "limitations": [
+        "Schematic; not a photograph of the lab setup"
+      ],
+      "contains_redactions": false
+    },
+    {
+      "figure_id": "FIG-10",
+      "title": "Nyquist versus physical chain",
+      "output_files": [
+        "output/article-part2/figures/fig10-nyquist-vs-physical-chain.png",
+        "output/article-part2/figures/fig10-nyquist-vs-physical-chain.svg"
+      ],
+      "status": "GENERATED_FROM_REAL_DATA",
+      "provenance": [],
+      "source_files": [
+        "docs/blog-part2-nyquist-meets-hardware.md"
+      ],
+      "source_sha256": [],
+      "generator_script": "scripts/article/generate_part2_figures.py",
+      "command": "PYTHONPATH=. python scripts/article/generate_part2_figures.py --figure FIG-10",
+      "parameters": {},
+      "trial_ids": [],
+      "claims_supported": [
+        "Nyquist is not a guarantee of usable transducer response"
+      ],
+      "limitations": [
+        "Conceptual diagram"
+      ],
+      "contains_redactions": false
+    },
+    {
+      "figure_id": "FIG-11",
+      "title": "Frame and channel pipeline",
+      "output_files": [
+        "output/article-part2/figures/fig11-frame-and-channel-pipeline.png",
+        "output/article-part2/figures/fig11-frame-and-channel-pipeline.svg"
+      ],
+      "status": "GENERATED_FROM_REAL_DATA",
+      "provenance": [],
+      "source_files": [
+        "src/protocol.py",
+        "src/fec.py",
+        "src/modulation.py"
+      ],
+      "source_sha256": [],
+      "generator_script": "scripts/article/generate_part2_figures.py",
+      "command": "PYTHONPATH=. python scripts/article/generate_part2_figures.py --figure FIG-11",
+      "parameters": {},
+      "trial_ids": [],
+      "claims_supported": [
+        "Pipeline includes CRC, optional Hamming, CPFSK, physical path, CRC validation"
+      ],
+      "limitations": [
+        "Schematic"
+      ],
+      "contains_redactions": false
+    },
+    {
+      "figure_id": "FIG-12",
+      "title": "Recovery timeline",
+      "output_files": [
+        "output/article-part2/figures/fig12-recovery-timeline.png",
+        "output/article-part2/figures/fig12-recovery-timeline.svg"
+      ],
+      "status": "GENERATED_FROM_REAL_DATA",
+      "provenance": [
+        "PHYSICAL_RX"
+      ],
+      "source_files": [
+        "docs/near-us-recovery-campaign.md",
+        "output/samples/experiment-summaries/20260804-nearus-payloads/summary.md"
+      ],
+      "source_sha256": [],
+      "generator_script": "scripts/article/generate_part2_figures.py",
+      "command": "PYTHONPATH=. python scripts/article/generate_part2_figures.py --figure FIG-12",
+      "parameters": {},
+      "trial_ids": [],
+      "claims_supported": [
+        "Ordered narrative matches documented campaign sequence"
+      ],
+      "limitations": [
+        "No wall-clock timestamps beyond filenames/summary date 2026-08-04"
+      ],
+      "contains_redactions": false
+    }
+  ]
+}

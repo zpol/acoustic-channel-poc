@@ -1,0 +1,12 @@
+FIG-01 regenerated from CSV; original PNG present=True
+FIG-02: MISSING physical pair; exported GENERATED_TX-only reference
+FIG-03 generated from near-US measurements.csv
+FIG-04 explanatory diagram generated
+FIG-05 rendered from redacted HELLO log + linked WAV
+FIG-06 table/csv generated from documented WAVs + summary
+FIG-07 before/after diagram generated
+FIG-08 spectrogram from HELLO PHYSICAL_RX WAV
+FIG-09 architecture diagram generated
+FIG-10 chain diagram generated
+FIG-11 pipeline diagram generated
+FIG-12 timeline generated
