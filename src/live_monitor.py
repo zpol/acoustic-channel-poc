@@ -73,16 +73,54 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--min-ratio", type=float, default=1.12)
     p.add_argument("--repeats", type=int, default=2, choices=(1, 2, 3))
     p.add_argument("--self-tx", action="store_true")
-    p.add_argument("--remote-tx", default=None)
+    p.add_argument(
+        "--remote-tx",
+        default=None,
+        help="SSH host for remote TX playback only "
+        "(or set ACOUSTIC_REMOTE_TX). Public docs use demo-user@tx-host.",
+    )
     p.add_argument(
         "--remote-dir",
-        default="/path/to/repository",
-        help="Remote repository path (SSH orchestration of playback only)",
+        default=None,
+        help="Remote repository path (or ACOUSTIC_REMOTE_DIR). Placeholder: /path/to/repository",
     )
     p.add_argument("--remote-output-device", type=int, default=1)
     p.add_argument("--near-ultrasonic", action="store_true")
     p.add_argument("--tx-delay", type=float, default=2.5)
     p.add_argument("--save-wav", type=Path, default=None)
+    p.add_argument(
+        "--bandpass",
+        action="store_true",
+        help="Enable RX bandpass (off by default; can flip CRC bits on some physical captures)",
+    )
+    p.add_argument(
+        "--no-bandpass",
+        action="store_true",
+        help="Deprecated alias: bandpass is already off by default",
+    )
+    p.add_argument(
+        "--sync-mode",
+        choices=("legacy", "correlation"),
+        default="correlation",
+    )
+    p.add_argument(
+        "--frequency-search-hz",
+        type=float,
+        default=None,
+        help="Carrier neighbourhood search (±Hz). Default 150 for near-US, 0 otherwise.",
+    )
+    p.add_argument(
+        "--frequency-search-step-hz",
+        type=float,
+        default=25.0,
+        help="Step for carrier neighbourhood search",
+    )
+    p.add_argument(
+        "--tail-seconds",
+        type=float,
+        default=None,
+        help="Extra listen time after TX (default 4s, 6s if near-US)",
+    )
     return p
 
 
@@ -142,11 +180,15 @@ def _render(
 
 
 def _launch_remote_tx(args: argparse.Namespace, cfg: ModulationConfig) -> subprocess.Popen:
-    msg = json.dumps(args.message)
+    import shlex
+
+    # Single-quote for the remote shell so $, !, etc. are not expanded (e.g. p4$$w0rd).
+    msg_q = shlex.quote(args.message)
     remote = (
-        f"cd {args.remote_dir} && . .venv/bin/activate && export PYTHONPATH=. && "
-        f"python -m src.transmitter --message {msg} "
-        f"--output-device {args.remote_output_device} "
+        f"cd {shlex.quote(str(args.remote_dir))} && . .venv/bin/activate && "
+        f"export PYTHONPATH=. && "
+        f"python -m src.transmitter --message {msg_q} "
+        f"--output-device {int(args.remote_output_device)} "
         f"--symbol-duration {cfg.symbol_duration} "
         f"--frequency-zero {cfg.frequency_zero} "
         f"--frequency-one {cfg.frequency_one} "
@@ -184,6 +226,14 @@ def _launch_local_tx(args: argparse.Namespace, cfg: ModulationConfig) -> subproc
 
 def main(argv: Optional[List[str]] = None) -> int:
     args = build_parser().parse_args(argv)
+    if not args.remote_tx:
+        import os
+
+        args.remote_tx = os.environ.get("ACOUSTIC_REMOTE_TX") or None
+    if not args.remote_dir:
+        import os
+
+        args.remote_dir = os.environ.get("ACOUSTIC_REMOTE_DIR") or "/path/to/repository"
     cfg = ModulationConfig(
         sample_rate=args.sample_rate,
         symbol_duration=args.symbol_duration,
@@ -222,14 +272,29 @@ def main(argv: Optional[List[str]] = None) -> int:
             args.message, cfg.symbol_duration,
             repeats=args.repeats, inter_frame_silence=0.3, fec=args.fec,
         )
-        duration = args.tx_delay + tx_dur + 4.0
+        tail = args.tail_seconds
+        if tail is None:
+            tail = 6.0 if args.near_ultrasonic else 4.0
+        duration = args.tx_delay + tx_dur + float(tail)
+        freq_search = args.frequency_search_hz
+        if freq_search is None:
+            freq_search = 150.0 if args.near_ultrasonic else 0.0
+        args.frequency_search_hz = float(freq_search)
+        if args.near_ultrasonic and args.min_ratio >= 1.12:
+            # Slightly looser tone decisions for weak HF response
+            args.min_ratio = 1.08
         console.print(
             f"[cyan]Auto-TX armed:[/cyan] message={args.message!r} "
             f"tx≈{tx_dur:.1f}s listen≈{duration:.1f}s "
-            f"({args.repeats}× {args.modulation})"
+            f"({args.repeats}× {args.modulation} fec={args.fec})\n"
+            f"  RX: min_ratio={args.min_ratio} "
+            f"freq_search=±{args.frequency_search_hz:.0f}Hz "
+            f"bandpass={'on' if args.bandpass else 'off'}"
         )
     else:
         duration = args.duration
+        if args.frequency_search_hz is None:
+            args.frequency_search_hz = 150.0 if args.near_ultrasonic else 0.0
 
     mode = "LIVE PHYSICAL CHANNEL"
     provenance = Provenance.PHYSICAL_RX.value
@@ -299,8 +364,27 @@ def main(argv: Optional[List[str]] = None) -> int:
                     chunk = np.asarray(live_buf[:cursor], dtype=np.float64).reshape(-1)
                     if len(chunk) >= window:
                         wave = chunk[-window:]
-                        e0 = goertzel(wave, cfg.frequency_zero, cfg.sample_rate)
-                        e1 = goertzel(wave, cfg.frequency_one, cfg.sample_rate)
+                        search = float(args.frequency_search_hz or 0.0)
+                        if search > 0:
+                            from src.synchronization import goertzel_neighbourhood
+
+                            _, e0 = goertzel_neighbourhood(
+                                wave,
+                                cfg.frequency_zero,
+                                cfg.sample_rate,
+                                search_hz=search,
+                                step_hz=float(args.frequency_search_step_hz),
+                            )
+                            _, e1 = goertzel_neighbourhood(
+                                wave,
+                                cfg.frequency_one,
+                                cfg.sample_rate,
+                                search_hz=search,
+                                step_hz=float(args.frequency_search_step_hz),
+                            )
+                        else:
+                            e0 = goertzel(wave, cfg.frequency_zero, cfg.sample_rate)
+                            e1 = goertzel(wave, cfg.frequency_one, cfg.sample_rate)
                         emax = max(emax, e0, e1, 1e-6)
                         bit = "1" if e1 >= e0 else "0"
 
@@ -364,8 +448,13 @@ def main(argv: Optional[List[str]] = None) -> int:
         min_ratio=args.min_ratio,
         expected_bits=expected,
         fec=args.fec,
-        sync_mode="correlation",
+        sync_mode=args.sync_mode,
         timing_steps=24,
+        apply_bandpass=bool(args.bandpass) and not args.no_bandpass,
+        frequency_search_hz=float(args.frequency_search_hz or 0.0),
+        frequency_search_step_hz=float(args.frequency_search_step_hz),
+        symbol_duration_search_percent=3.0 if args.near_ultrasonic else 2.5,
+        symbol_duration_search_steps=7,
     )
     if stats.frame_success and stats.recovered_message:
         recovered = stats.recovered_message

@@ -476,17 +476,20 @@ def run_wizard(args: argparse.Namespace) -> int:
     validate_payload(msg)
     near_us = mode == "live-near-us"
     if near_us:
+        # Calibration-derived "least bad" pair (see configs/near-us-recovery.yaml).
+        # Classic 18500/19500 remains available via explicit CLI flags.
         cfg = ModulationConfig(
             sample_rate=cfg.sample_rate,
-            symbol_duration=cfg.symbol_duration,
-            frequency_zero=18500,
-            frequency_one=19500,
-            amplitude=min(cfg.amplitude, 0.25),
+            symbol_duration=0.25,
+            frequency_zero=15000,
+            frequency_one=16000,
+            amplitude=min(cfg.amplitude, 0.30),
             near_ultrasonic=True,
         )
         console.print(
-            "[yellow]Near-ultrasonic physical decode was not reliable on the "
-            "documented laboratory hardware. Proceed only for education.[/yellow]"
+            "[yellow]Near-ultrasonic mode uses calibration-derived 15/16 kHz, "
+            "Tsym=0.25s (experimental). Physical decode was not reliable on the "
+            "documented laboratory hardware; expect possible CRC failure.[/yellow]"
         )
 
     try:

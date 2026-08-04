@@ -203,6 +203,29 @@ Every item states provenance and what it does **not** demonstrate.
 
 ---
 
+## 16. Audible vs near-US calibration contrast
+
+**Filename:** `14-audible-vs-near-us-calibration.png`  
+**Path:** `output/article/14-audible-vs-near-us-calibration.png`  
+**Provenance:** PHYSICAL_RX  
+**Demonstrates:** Detector-SNR curves for 2–10 kHz vs 15–21 kHz on the same lab path.  
+**Does not demonstrate:** Universal laptop response or successful near-US decode.  
+**Suggested section:** Part 2 — When Nyquist Meets Real Hardware  
+**Suggested caption:** Audible-band probes can show positive detector SNR; the near-US sweep stays weak or negative.  
+**Publication status:** Ready
+
+---
+
+## Blog drafts
+
+| Draft | Path | Status |
+| --- | --- | --- |
+| Part 2 (Nyquist / near-US failure) | `docs/blog-part2-nyquist-meets-hardware.md` | Ready for Medium paste |
+| Near-US recovery campaign | `docs/near-us-recovery-campaign.md` | Lab plan |
+| Alternative channels | `docs/alternative-physical-channels.md` | Lab plan |
+
+---
+
 ## Additional curated paths
 
 | Path | Provenance |

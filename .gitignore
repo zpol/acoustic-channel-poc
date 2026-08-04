@@ -23,3 +23,7 @@ build/
 # Raw physical dumps (curated copies live under output/samples/)
 experiments/*
 !experiments/.gitkeep
+
+# Local lab overrides (may contain RFC1918 addresses / usernames)
+configs/local-lab.env
+.lab/

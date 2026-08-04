@@ -22,6 +22,8 @@ Built for an **authorized cybersecurity conference demo** to illustrate that an 
 
 Physical results are labelled **PHYSICAL_RX** and curated under `output/samples/` (full dumps may live locally in `experiments/`). Simulation artefacts are labelled **SIMULATED_RX**.
 
+**Blog drafts:** [Part 2 — When Nyquist Meets Real Hardware](docs/blog-part2-nyquist-meets-hardware.md) · [Near-US recovery campaign](docs/near-us-recovery-campaign.md) · [Alternative channels](docs/alternative-physical-channels.md)
+
 ### Quick demo (audible, remote TX)
 
 ```bash

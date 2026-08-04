@@ -290,9 +290,13 @@ def decide_symbol(
 def bandpass_filter(
     samples: np.ndarray,
     config: ModulationConfig,
-    bandwidth: float = 800.0,
+    bandwidth: float = 1500.0,
 ) -> np.ndarray:
-    """Band-pass around the BFSK tone pair to reduce out-of-band noise."""
+    """Band-pass covering both carriers (plus margin) to reduce out-of-band noise.
+
+    Default margin is intentionally wide: a tight filter around distant carriers
+    (e.g. 3.5 and 7.5 kHz) can distort edges and flip CRC bits on physical captures.
+    """
     low = max(50.0, min(config.frequency_zero, config.frequency_one) - bandwidth)
     high = min(
         config.sample_rate / 2.0 - 50.0,
@@ -301,7 +305,7 @@ def bandpass_filter(
     if low >= high:
         return samples
     nyq = config.sample_rate / 2.0
-    b, a = butter(4, [low / nyq, high / nyq], btype="band")
+    b, a = butter(2, [low / nyq, high / nyq], btype="band")
     return filtfilt(b, a, samples).astype(np.float64)
 
 

@@ -46,6 +46,7 @@ SCAN_GLOBS = (
 SKIP_FILES = {
     "scripts/docs_safety_scan.py",
     "tests/test_publication_pass.py",
+    "configs/local-lab.env",
 }
 
 SKIP_PARTS = (
@@ -53,6 +54,7 @@ SKIP_PARTS = (
     "__pycache__",
     ".venv/",
     "node_modules/",
+    "configs/local-lab.env",
 )
 
 

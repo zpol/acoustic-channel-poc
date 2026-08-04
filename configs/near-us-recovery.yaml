@@ -1,0 +1,20 @@
+name: near-us-recovery
+provenance: calibration_derived_experimental
+modulation: cpfsk
+frequency_zero_hz: 15000
+frequency_one_hz: 16000
+symbol_duration_seconds: 0.25
+fec_mode: hamming74
+sync_mode: soft_correlation
+repetitions: 2
+sample_rate: 48000
+amplitude: 0.30
+maximum_payload_bytes: 16
+requires_near_ultrasonic_flag: true
+calibration_source: output/samples/calibration-near-us-physical/
+calibration_note: "BEST_COMPROMISE carriers; estimated_detector_snr_db was negative (~-6.5). Experimental only."
+notes:
+  - Not a proven live configuration on the documented hardware.
+  - Prefer NU-A/B/C matrix in docs/near-us-recovery-campaign.md.
+  - Recalibrate after any hardware change.
+  - Do not claim inaudibility.

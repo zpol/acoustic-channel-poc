@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import subprocess
 import sys
 import time
@@ -347,11 +348,17 @@ def main() -> int:
     p.add_argument("--band", choices=("audible", "near-us", "both"), default="both")
     p.add_argument("--input-device", type=int, default=0)
     p.add_argument("--output-device", type=int, default=0)
-    p.add_argument("--remote-tx", default="demo-user@tx-host")
+    p.add_argument(
+        "--remote-tx",
+        default=None,
+        help="SSH host (or ACOUSTIC_REMOTE_TX). Placeholder in docs: demo-user@tx-host",
+    )
     p.add_argument("--remote-dir", default="/path/to/repository")
     p.add_argument("--remote-output-device", type=int, default=1)
     p.add_argument("--local-tx", action="store_true", help="Play on this host instead of SSH")
     args = p.parse_args()
+    if not args.remote_tx:
+        args.remote_tx = os.environ.get("ACOUSTIC_REMOTE_TX") or "demo-user@tx-host"
 
     remote = None if args.local_tx else args.remote_tx
     if remote:

@@ -141,3 +141,10 @@ python -m src.experiment --non-interactive --remote-tx demo-user@tx-host \
 | `output/modulation-comparison/*.png` | GENERATED_TX |
 | `output/benchmark/*.png` | SIMULATED_RX |
 | `experiments/*/trial-*/rx.wav` | PHYSICAL_RX |
+| `output/article/14-audible-vs-near-us-calibration.png` | PHYSICAL_RX |
+
+## Blog
+
+- Part 2 draft: [`docs/blog-part2-nyquist-meets-hardware.md`](blog-part2-nyquist-meets-hardware.md)
+- Near-US recovery: [`docs/near-us-recovery-campaign.md`](near-us-recovery-campaign.md)
+- Alternative channels (beeper / piezo / infrasound notes): [`docs/alternative-physical-channels.md`](alternative-physical-channels.md)

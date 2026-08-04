@@ -71,7 +71,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--distance-cm", type=float, default=30.0)
     p.add_argument("--orientation", default="mic-facing-speaker")
     p.add_argument("--room", default="lab-quiet")
-    p.add_argument("--remote-tx", default=None, help="SSH host for remote TX e.g. demo-user@tx-host")
+    p.add_argument(
+        "--remote-tx",
+        default=None,
+        help="SSH host for remote TX (or ACOUSTIC_REMOTE_TX). Example placeholder: demo-user@tx-host",
+    )
     p.add_argument("--remote-dir", default="/path/to/repository")
     p.add_argument("--remote-output-device", type=int, default=1)
     return p
@@ -111,9 +115,12 @@ def run_trial(
             "--sync-mode", "correlation",
             "--save-raw-wav", str(raw),
         ]
+        import shlex
+
         remote = (
-            f"cd {args.remote_dir} && . .venv/bin/activate && export PYTHONPATH=. && "
-            f"python -m src.transmitter --message {json.dumps(message)} "
+            f"cd {shlex.quote(str(args.remote_dir))} && . .venv/bin/activate && "
+            f"export PYTHONPATH=. && "
+            f"python -m src.transmitter --message {shlex.quote(message)} "
             f"--output-device {args.remote_output_device} "
             f"--symbol-duration {cfg.symbol_duration} "
             f"--frequency-zero {cfg.frequency_zero} --frequency-one {cfg.frequency_one} "
@@ -208,6 +215,10 @@ def run_trial(
 
 def main(argv: Optional[List[str]] = None) -> int:
     args = build_parser().parse_args(argv)
+    if not args.remote_tx:
+        import os
+
+        args.remote_tx = os.environ.get("ACOUSTIC_REMOTE_TX") or None
     if not args.non_interactive and not args.simulate:
         console.print(Panel(
             "Guided acoustic experiment.\n"

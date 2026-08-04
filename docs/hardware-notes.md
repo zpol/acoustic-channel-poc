@@ -10,9 +10,11 @@ Redacted device descriptions only in publishable metadata (no usernames, home pa
 - Prefer analog output device over HDMI sinks for TX when same-host
 - Same-process duplex ALSA often unreliable → two-process RX-then-TX
 
-### Remote TX (`remote-lab-tx` / 192.0.2.10)
+### Remote TX (`remote-lab-tx`)
 
-- ThinkPad with sof-hda-dsp speakers; sounddevice device index **1** worked for playback
+- Publishable examples use `demo-user@tx-host` / `192.0.2.10`
+- For local lab sessions, set `ACOUSTIC_REMOTE_TX` (see `configs/local-lab.env.example`)
+- ThinkPad-class sof-hda-dsp speakers; sounddevice device index **1** often works for playback
 - Pulse/PipeWire Speaker sink should be unmuted (~80–85%)
 - Capture remains on the local host microphone
 
