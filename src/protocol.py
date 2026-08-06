@@ -8,7 +8,7 @@ Frame layout::
 - Sync word: unique 16-bit pattern unlikely to occur accidentally
 - Version: 1 byte (currently ``0x01``)
 - Payload length: 1 byte (0–32)
-- Payload: ASCII/UTF-8 bytes, maximum 32 bytes
+- Payload: ASCII/UTF-8 bytes, maximum 64 bytes
 - CRC: CRC-16-CCITT over version + length + payload
 """
 
@@ -21,7 +21,7 @@ from src.fec import FecResult, decode_hamming74, encode_hamming74
 
 # Protocol constants
 PROTOCOL_VERSION: int = 0x01
-MAX_PAYLOAD_BYTES: int = 32
+MAX_PAYLOAD_BYTES: int = 64
 PREAMBLE_BITS: Tuple[int, ...] = tuple(int(b) for b in "1010101010101010")
 # Sync word chosen to be distinct from the alternating preamble (0xA5F0).
 SYNC_WORD_BITS: Tuple[int, ...] = tuple(int(b) for b in "1010010111110000")

@@ -1,0 +1,29 @@
+Auto-TX armed: message='en un lugar de la mancha de cuyo nombre no quiero 
+acordarme' tx≈64.3s listen≈72.8s (1× cpfsk fec=none)
+  RX: min_ratio=1.08 freq_search=±150Hz bandpass=off
+╭──────────────── MODE ────────────────╮╭─────────────── FRAME ────────────────╮
+│ LIVE PHYSICAL CHANNEL (remote TX)    ││ STATUS: TX DONE — trailing capture   │
+│ f0=15000  f1=16000                   ││ CRC: —                               │
+│ Tsym=0.120s                          ││ NOTE: TX finished                    │
+│ t=72.8/72.8s                         │╰──────────────────────────────────────╯
+╰──────────────────────────────────────╯                                        
+╭───────────────────────── WAVEFORM (live mic buffer) ─────────────────────────╮
+│ ▁ ▂▃▆▇▇█▇▆▅▄▂▁▁ ▁▃▄▆▇▇▇▆▅▅▄▃▃▂▁▁▄▆▇▇▇▇▅▅▄▃▂▂ ▁▂▅▅▆▆▆▆▅▅▄▃▂▁▁▁▃▅▅▇▅▆▅▅▅▄▂     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭───────────────────── TONE ENERGY (from capture buffer) ──────────────────────╮
+│ f0 ░░░░░░░░░░░░░░░░░░░░░░░░ 2.22e-04                                         │
+│ f1 ░░░░░░░░░░░░░░░░░░░░░░░░ 1.45e-03                                         │
+│ bit → 1                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭───────────────────────────── RECOVERED MESSAGE ──────────────────────────────╮
+│ —                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Saved capture: output/part3/physical/quixote_nearus_20260806T191433_120ms_R1.wav
+Capture done: samples=3495360 (72.8s) peak=0.918 — full decode…
+╭─────────────────────────────────── RESULT ───────────────────────────────────╮
+│ Recovered: 'en un lugar de la mancha de cuyo nombre no quiero acordarme'     │
+│ CRC: CRC VALID                                                               │
+│ Status: CRC_VALID                                                            │
+│ Audio samples: 3495360                                                       │
+│ Provenance: PHYSICAL_RX                                                      │
+╰──────────────────────────────────────────────────────────────────────────────╯

@@ -14,6 +14,10 @@ output/*
 !output/article/**
 !output/article-part2/
 !output/article-part2/**
+!output/part3/
+!output/part3/**
+# Raw physical WAVs under part3 stay local (logs/summaries/figures may be tracked)
+output/part3/physical/*.wav
 # Never commit anything with POL in the name
 **/*POL*
 **/*pol*

@@ -22,7 +22,8 @@ Do **not** start recovery at 18500/19500 unless repeating a known-bad baseline.
 **Update (2026-08-04):** a slow recovery profile on **15000/16000 Hz** recovered CRC-valid PHYSICAL_RX frames (see Results log). That does **not** rewrite the calib SNR curve; it shows negative calib SNR ≠ “impossible under every profile”.
 ## Config
 
-Canonical starting point: [`configs/near-us-recovery.yaml`](../configs/near-us-recovery.yaml)
+Canonical starting point for **margin**: [`configs/near-us-recovery.yaml`](../configs/near-us-recovery.yaml)  
+Canonical starting point for **speed** (lab-validated): [`configs/near-us-fast.yaml`](../configs/near-us-fast.yaml)
 
 ## Trial matrix
 
@@ -76,3 +77,16 @@ Record each session under `experiments/` and copy a redacted summary to
 | --- | --- | --- | --- | --- | --- |
 | 2026-08-04 | NU-A HELLO | local | 1 | 1/1 | 15/16 kHz, 0.25s, hamming74×2 |
 | 2026-08-04 | NU payloads | local | 4+1 | 5/5 CRC; 4/4 exact after SSH quote fix | `output/lab_nearus_payloads/`; first `p4$$w0rd` hit remote `$$` expansion |
+| 2026-08-06 | NU-fast cliff HELLO | local | 7 | 7/7 | 15/16 kHz; Tsym 0.12–0.25; FEC none/hamming; R=1–2 — see `output/part3/physical/nearus_speed_probe.log` |
+| 2026-08-06 | NU-fast Quixote | local | 1 | 1/1 | 59 B sentence @ 0.12s/none/R1; airtime ≈64 s; payload goodput ≈7.3 bit/s |
+
+### Fast profile (recommended when FER stays low)
+
+```bash
+python -m src.live_monitor --remote-tx demo-user@tx-host \
+  --remote-output-device 0 --message HELLO --modulation cpfsk \
+  --near-ultrasonic --frequency-zero 15000 --frequency-one 16000 \
+  --symbol-duration 0.12 --repeats 1 --amplitude 0.30 --fec none
+```
+
+Config: [`configs/near-us-fast.yaml`](../configs/near-us-fast.yaml). Fall back to the 0.25 s + Hamming ×2 recovery profile if the path degrades.

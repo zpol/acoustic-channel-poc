@@ -1,0 +1,29 @@
+name: near-us-fast
+provenance: physically_validated_configuration
+modulation: cpfsk
+frequency_zero_hz: 15000
+frequency_one_hz: 16000
+symbol_duration_seconds: 0.12
+fec_mode: none
+sync_mode: soft_correlation
+repetitions: 1
+sample_rate: 48000
+amplitude: 0.30
+maximum_payload_bytes: 64
+requires_near_ultrasonic_flag: true
+inter_frame_silence_seconds: 0.0
+apply_bandpass: false
+frequency_search_hz: 150
+min_ratio: 1.08
+validation_trials: >
+  2026-08-06 PHYSICAL_RX on remote TX → local mic (outdev 0):
+  HELLO @ 0.12s/none/R1 CRC VALID;
+  Quixote sentence (59 B) @ 0.12s/none/R1 CRC VALID (~64 s airtime, ~7.3 bit/s payload goodput).
+  Earlier cliff: HELLO also OK at 0.15/0.20/0.25 with/without Hamming.
+validation_git_note: "Validated live; not a large-N reliability study."
+notes:
+  - Faster than configs/near-us-recovery.yaml (0.25s + hamming74 ×2).
+  - Prefer this for short synthetic payloads when the room/path matches the lab pair.
+  - Fall back to near-us-recovery.yaml if FER rises (noisy room, distance, different hardware).
+  - Do not claim inaudibility; spectral leakage may still exist.
+  - Recalibrate after hardware change.

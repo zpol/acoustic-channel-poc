@@ -1,0 +1,37 @@
+
+--- NEAR-US T=0.12 fec=none R=1 air≈12.5s listen=20.5s ---
+ssh=0 finished=True
+peak=0.246 success=True msg='HELLO' err=None
+
+--- NEAR-US T=0.15 fec=none R=1 air≈15.6s listen=23.6s ---
+ssh=0 finished=True
+peak=0.918 success=True msg='HELLO' err=None
+
+--- NEAR-US T=0.15 fec=hamming74 R=1 air≈24.8s listen=32.8s ---
+ssh=0 finished=True
+peak=0.918 success=True msg='HELLO' err=None
+
+--- NEAR-US T=0.2 fec=none R=1 air≈20.8s listen=28.8s ---
+ssh=0 finished=True
+peak=0.918 success=True msg='HELLO' err=None
+
+--- NEAR-US T=0.2 fec=hamming74 R=1 air≈33.0s listen=41.0s ---
+ssh=0 finished=True
+peak=0.918 success=True msg='HELLO' err=None
+
+--- NEAR-US T=0.25 fec=hamming74 R=1 air≈41.2s listen=49.2s ---
+ssh=0 finished=True
+peak=0.918 success=True msg='HELLO' err=None
+
+--- NEAR-US T=0.25 fec=hamming74 R=2 air≈82.8s listen=90.8s ---
+ssh=0 finished=True
+peak=0.918 success=True msg='HELLO' err=None
+
+SUMMARY NEAR-US SPEED
+OK T=0.12s fec=none      R=1 air≈12.5s peak=0.246 -> 'HELLO' 
+OK T=0.15s fec=none      R=1 air≈15.6s peak=0.918 -> 'HELLO' 
+OK T=0.15s fec=hamming74 R=1 air≈24.8s peak=0.918 -> 'HELLO' 
+OK T=0.20s fec=none      R=1 air≈20.8s peak=0.918 -> 'HELLO' 
+OK T=0.20s fec=hamming74 R=1 air≈33.0s peak=0.918 -> 'HELLO' 
+OK T=0.25s fec=hamming74 R=1 air≈41.2s peak=0.918 -> 'HELLO' 
+OK T=0.25s fec=hamming74 R=2 air≈82.8s peak=0.918 -> 'HELLO' 

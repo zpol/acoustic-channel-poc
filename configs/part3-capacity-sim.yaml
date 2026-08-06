@@ -1,0 +1,22 @@
+name: part3-capacity-sim
+provenance: SIMULATED_RX
+description: Default parameters for scripts/part3/run_capacity_campaigns.py
+seed: 20260806
+trials_per_condition: 12
+payload: HELLO
+campaigns:
+  - tsym
+  - cliff
+  - spacing
+  - modulation
+  - redundancy
+  - overhead
+  - compression
+metrics:
+  - fer
+  - mean_ber
+  - payload_goodput_bps
+  - raw_symbol_rate_bps
+  - mean_airtime_s
+  - mean_decode_cpu_ms
+output_dir: output/part3

@@ -22,8 +22,11 @@ Built for an **authorized cybersecurity conference demo** to illustrate that an 
 
 Physical results are labelled **PHYSICAL_RX** and curated under `output/samples/` (full dumps may live locally in `experiments/`). Simulation artefacts are labelled **SIMULATED_RX**.
 
-**Blog drafts:** [Part 2 — When Nyquist Meets Real Hardware](docs/blog-part2-nyquist-meets-hardware.md) · [Near-US recovery campaign](docs/near-us-recovery-campaign.md) · [Alternative channels](docs/alternative-physical-channels.md)
+**Blog drafts:** [Part 2 — When Nyquist Meets Real Hardware](docs/blog-part2-nyquist-meets-hardware.md) · [Part 3 capacity outline](docs/blog-part3-outline.md) · [Near-US recovery](docs/near-us-recovery-campaign.md) · [Alternative channels](docs/alternative-physical-channels.md)
 
+**Near-US configs:** [`configs/near-us-fast.yaml`](configs/near-us-fast.yaml) (lab-validated 0.12 s) · [`configs/near-us-recovery.yaml`](configs/near-us-recovery.yaml) (margin)
+
+**Part 3 capacity (SIMULATED_RX harness):** [`docs/part3-capacity-report.md`](docs/part3-capacity-report.md) · `PYTHONPATH=. python scripts/part3/run_capacity_campaigns.py`
 ### Quick demo (audible, remote TX)
 
 ```bash
@@ -226,14 +229,14 @@ python -m src.calibration --dry-run --plot output/calibration_response.png
 ## Protocol
 
 ```text
-PREAMBLE (16) | SYNC (16) | VERSION (8) | LENGTH (8) | PAYLOAD (≤32 bytes) | CRC16 (16)
+PREAMBLE (16) | SYNC (16) | VERSION (8) | LENGTH (8) | PAYLOAD (≤64 bytes) | CRC16 (16)
 ```
 
 * Preamble: `1010101010101010`
 * Sync: `1010010111110000` (0xA5F0)
 * Version: `0x01`
 * CRC: CRC-16-CCITT over `VERSION | LENGTH | PAYLOAD`
-* Maximum payload: **32 bytes**; empty payloads are rejected
+* Maximum payload: **64 bytes**; empty payloads are rejected
 
 The receiver **searches** for preamble + sync; recording does not need to start exactly at the first bit.
 

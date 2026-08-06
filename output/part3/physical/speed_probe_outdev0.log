@@ -1,0 +1,22 @@
+
+--- out=0 T=0.2 amp=0.4 R=2 msg='HELLO' listen=47.9s ---
+ssh 0 finished= True
+peak=0.245 success=True msg='HELLO' err=None wav=speed_out0_T200_R2_HELLO.wav
+
+--- out=0 T=0.12 amp=0.4 R=2 msg='HELLO' listen=31.2s ---
+ssh 0 finished= True
+peak=0.918 success=True msg='HELLO' err=None wav=speed_out0_T120_R2_HELLO.wav
+
+--- out=0 T=0.07 amp=0.4 R=1 msg='DEMO_DEMO_334' listen=17.8s ---
+ssh 0 finished= True
+peak=0.019 success=True msg='DEMO_DEMO_334' err=None wav=speed_out0_T70_R1_DEMO_DEMO_334.wav
+
+--- out=0 T=0.07 amp=0.4 R=2 msg='DEMO_DEMO_334' listen=29.8s ---
+ssh 0 finished= True
+peak=0.918 success=True msg='DEMO_DEMO_334' err=None wav=speed_out0_T70_R2_DEMO_DEMO_334.wav
+
+SUMMARY
+OK T=0.2 R=2 'HELLO' -> 'HELLO' peak=0.245
+OK T=0.12 R=2 'HELLO' -> 'HELLO' peak=0.918
+OK T=0.07 R=1 'DEMO_DEMO_334' -> 'DEMO_DEMO_334' peak=0.019
+OK T=0.07 R=2 'DEMO_DEMO_334' -> 'DEMO_DEMO_334' peak=0.918

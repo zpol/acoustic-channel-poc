@@ -1,0 +1,26 @@
+name: part3-best-candidate
+provenance: candidate_from_sim_plus_physical_priors
+status: awaiting_physical_validation
+modulation: cpfsk
+frequency_zero_hz: 3000
+frequency_one_hz: 8000
+symbol_duration_seconds: 0.070
+fec_mode: none
+sync_mode: soft_correlation
+repetitions: 1
+sample_rate: 48000
+amplitude: 0.28
+inter_frame_silence_seconds: 0.0
+apply_bandpass: false
+notes:
+  - Selected for physical re-validation, not as a universal optimum.
+  - Mild SIMULATED_RX showed rising goodput down to very short Tsym; that does NOT authorize claiming physical 20–30 ms capacity.
+  - Prior PHYSICAL_RX: 70 ms DEMO_DEMO_334 was 3/3; 40 ms was 2/3; 50–60 ms failed in an initial sweep.
+  - Therefore the publishable "fast but evidenced" audible point remains 70 ms until a larger-N physical cliff campaign completes.
+  - For stressed/near-US paths prefer FEC+repeats (near-us-recovery.yaml) over raw speed.
+  - Measure payload_goodput_bps = 8*payload_bytes*successes/sum(airtime); never report only 1/Tsym.
+validation_plan:
+  payload: DEMO_DEMO_334
+  n_trials: 10
+  success_criterion: "CRC VALID exact match; report M/N and goodput"
+  record: "WAV + metadata + redacted log under experiments/ and curated summary"
