@@ -1,0 +1,42 @@
+{
+  "generated_at": "2026-08-06T19:33:44Z",
+  "payload": "HELLO",
+  "trials": 5,
+  "ggwave_protocols": [3, 5],
+  "summary": [
+    {
+      "stack": "ggwave_ultrasound_p3",
+      "n": 5,
+      "successes": 0,
+      "fer": 1.0,
+      "mean_airtime_s_all": 2.9013333333333335,
+      "mean_airtime_s_success": null,
+      "payload_goodput_bps": 0.0,
+      "payload": "HELLO",
+      "provenance": "PHYSICAL_RX"
+    },
+    {
+      "stack": "ggwave_ultrasound_p5",
+      "n": 5,
+      "successes": 0,
+      "fer": 1.0,
+      "mean_airtime_s_all": 1.8773333333333333,
+      "mean_airtime_s_success": null,
+      "payload_goodput_bps": 0.0,
+      "payload": "HELLO",
+      "provenance": "PHYSICAL_RX"
+    },
+    {
+      "stack": "near_us_fast",
+      "n": 5,
+      "successes": 5,
+      "fer": 0.0,
+      "mean_airtime_s_all": 12.48,
+      "mean_airtime_s_success": 12.48,
+      "payload_goodput_bps": 3.205128205128205,
+      "payload": "HELLO",
+      "provenance": "PHYSICAL_RX"
+    }
+  ],
+  "note": "PHYSICAL_RX A/B; WAVs gitignored under output/part3/ggwave-bench/*.wav"
+}

@@ -16,7 +16,7 @@ Built for an **authorized cybersecurity conference demo** to illustrate that an 
 * Hardware profile, physical calibration package, carrier recommendations
 * Experiment runner: `python -m src.experiment`
 * Stage demo / replay: `python -m src.stage_demo`
-* **Live terminal monitor:** `python -m src.live_monitor` (waveform, tone bars, bits → message)
+* **Live terminal monitor:** `python -m src.live_monitor` (live tone energy; plaintext after **blind CRC** decode)
 * Demo-day configs: `docs/demo-day-configs.md`
 * Docs: `docs/conference-runbook.md`, `docs/results-summary.md`
 
@@ -26,7 +26,8 @@ Physical results are labelled **PHYSICAL_RX** and curated under `output/samples/
 
 **Near-US configs:** [`configs/near-us-fast.yaml`](configs/near-us-fast.yaml) (lab-validated 0.12 s) · [`configs/near-us-recovery.yaml`](configs/near-us-recovery.yaml) (margin)
 
-**Part 3 capacity (SIMULATED_RX harness):** [`docs/part3-capacity-report.md`](docs/part3-capacity-report.md) · `PYTHONPATH=. python scripts/part3/run_capacity_campaigns.py`
+**Part 3:** [capacity report](docs/part3-capacity-report.md) · [ggwave A/B (negative ultrasound)](docs/part3-ggwave-bench.md) · `PYTHONPATH=. python scripts/part3/run_capacity_campaigns.py`
+
 ### Quick demo (audible, remote TX)
 
 ```bash
@@ -39,6 +40,18 @@ python -m src.live_monitor --remote-tx demo-user@tx-host \
   --remote-output-device 1 --message DEMO_DEMO_334 --modulation cpfsk \
   --symbol-duration 0.07 --frequency-zero 3000 --frequency-one 8000 \
   --repeats 1 --amplitude 0.30
+```
+
+### Near-US live monitor (remote TX)
+
+Plaintext is recovered after capture (blind CRC). On a hot mic path prefer `--amplitude 0.18` (PHYSICAL_RX lab note). Details: [`docs/near-us-recovery-campaign.md`](docs/near-us-recovery-campaign.md).
+
+```bash
+python -m src.live_monitor --remote-tx demo-user@tx-host \
+  --remote-output-device 0 --input-device 0 \
+  --message HELLO --modulation cpfsk \
+  --near-ultrasonic --frequency-zero 15000 --frequency-one 16000 \
+  --symbol-duration 0.12 --repeats 1 --amplitude 0.18 --fec none
 ```
 
 ### Physical calibration

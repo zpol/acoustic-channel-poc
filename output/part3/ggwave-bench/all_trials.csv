@@ -1,0 +1,16 @@
+stack,trial,payload,success,recovered,error,airtime_s,listen_s,peak,payload_goodput_bps,wav,provenance
+ggwave_ultrasound_p3,0,HELLO,0,,no_decode,2.9013333333333335,6.9013333333333335,0.24762630462646484,0.0,output/part3/ggwave-bench/ggwave_rx_p3_t0.wav,PHYSICAL_RX
+ggwave_ultrasound_p3,1,HELLO,0,,no_decode,2.9013333333333335,6.9013333333333335,0.01421058177947998,0.0,output/part3/ggwave-bench/ggwave_rx_p3_t1.wav,PHYSICAL_RX
+ggwave_ultrasound_p3,2,HELLO,0,,no_decode,2.9013333333333335,6.9013333333333335,0.013845086097717285,0.0,output/part3/ggwave-bench/ggwave_rx_p3_t2.wav,PHYSICAL_RX
+ggwave_ultrasound_p3,3,HELLO,0,,no_decode,2.9013333333333335,6.9013333333333335,0.014173388481140137,0.0,output/part3/ggwave-bench/ggwave_rx_p3_t3.wav,PHYSICAL_RX
+ggwave_ultrasound_p3,4,HELLO,0,,no_decode,2.9013333333333335,6.9013333333333335,0.013538360595703125,0.0,output/part3/ggwave-bench/ggwave_rx_p3_t4.wav,PHYSICAL_RX
+ggwave_ultrasound_p5,0,HELLO,0,,no_decode,1.8773333333333333,5.8773333333333335,0.014548063278208242,0.0,output/part3/ggwave-bench/ggwave_rx_p5_t0.wav,PHYSICAL_RX
+ggwave_ultrasound_p5,1,HELLO,0,,no_decode,1.8773333333333333,5.8773333333333335,0.013598799705505371,0.0,output/part3/ggwave-bench/ggwave_rx_p5_t1.wav,PHYSICAL_RX
+ggwave_ultrasound_p5,2,HELLO,0,,no_decode,1.8773333333333333,5.8773333333333335,0.014092206954956055,0.0,output/part3/ggwave-bench/ggwave_rx_p5_t2.wav,PHYSICAL_RX
+ggwave_ultrasound_p5,3,HELLO,0,,no_decode,1.8773333333333333,5.8773333333333335,0.0141066312789917,0.0,output/part3/ggwave-bench/ggwave_rx_p5_t3.wav,PHYSICAL_RX
+ggwave_ultrasound_p5,4,HELLO,0,,no_decode,1.8773333333333333,5.8773333333333335,0.014223337173461914,0.0,output/part3/ggwave-bench/ggwave_rx_p5_t4.wav,PHYSICAL_RX
+near_us_fast,0,HELLO,1,HELLO,,12.48,18.48,0.010692834854125977,3.205128205128205,output/part3/ggwave-bench/nearus_fast_rx_t0.wav,PHYSICAL_RX
+near_us_fast,1,HELLO,1,HELLO,,12.48,18.48,0.91796875,3.205128205128205,output/part3/ggwave-bench/nearus_fast_rx_t1.wav,PHYSICAL_RX
+near_us_fast,2,HELLO,1,HELLO,,12.48,18.48,0.91796875,3.205128205128205,output/part3/ggwave-bench/nearus_fast_rx_t2.wav,PHYSICAL_RX
+near_us_fast,3,HELLO,1,HELLO,,12.48,18.48,0.91796875,3.205128205128205,output/part3/ggwave-bench/nearus_fast_rx_t3.wav,PHYSICAL_RX
+near_us_fast,4,HELLO,1,HELLO,,12.48,18.48,0.91796875,3.205128205128205,output/part3/ggwave-bench/nearus_fast_rx_t4.wav,PHYSICAL_RX

@@ -18,6 +18,7 @@ output/*
 !output/part3/**
 # Raw physical WAVs under part3 stay local (logs/summaries/figures may be tracked)
 output/part3/physical/*.wav
+output/part3/ggwave-bench/*.wav
 # Never commit anything with POL in the name
 **/*POL*
 **/*pol*

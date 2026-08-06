@@ -67,15 +67,23 @@ Publish the ranked list from the technical report (measure first, then change).
 
 ## 8. What did not help
 
-- Payload zlib for short text / JSON / random (often expands under 32 B cap)
+- Payload zlib for short text / JSON / random (often expands under payload cap)
 - Blind repeats+FEC when channel is already clean (airtime tax)
 - M-ary without a new demodulator (not yet production)
+- Assuming ggwave rates from upstream docs without PHYSICAL_RX A/B on this path
+
+## 8b. Spectral-efficiency hypothesis (ggwave-like)
+
+Theory: denser multi-tone FSK can be ~10× raw bitrate vs binary near-us-fast ([`part3-ggwave-comparison.md`](part3-ggwave-comparison.md)).
+
+**PHYSICAL_RX A/B:** ultrasound ggwave 0/5; near-us-fast 5/5 @ ~3.2 bit/s ([`part3-ggwave-bench.md`](part3-ggwave-bench.md)). Article takeaway: spectral efficiency ≠ working faster channel on this laptop near-US path; keep binary fast profile.
 
 ## 9. Recommended operating points
 
 - Conference / demo: existing audible 70 ms profile
 - Aggressive audible candidate for physical re-test: see `configs/part3-best-candidate.yaml`
-- Near-US: keep recovery profile; do not confuse with capacity maximization
+- Near-US: prefer `configs/near-us-fast.yaml` when FER allows; fall back to recovery profile
+- ggwave-like multi-tone: **rejected for this path** after ultrasound A/B FER=1.0; revisit only with new PHYSICAL_RX evidence
 
 ## 10. Closing
 

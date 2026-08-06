@@ -38,6 +38,8 @@ For payload `HELLO` (5 bytes), FEC none:
 
 Figures: `output/part3/figures/fig-overhead-raw-vs-goodput.*`
 
+Near-US fast operating point (lab-validated): see [`configs/near-us-fast.yaml`](../configs/near-us-fast.yaml) and §10.
+
 ---
 
 ## 2. Metrics
@@ -229,6 +231,7 @@ Harness / metrics code:
 | Error correction | Helps stressed channels; taxes clean channels. |
 | Compression | Generally not worthwhile for this payload regime. |
 | Channel capacity | Report **payload goodput + FER + N**; e.g. ideal HELLO @70 ms ≈ 5.5 bit/s if always successful; physical success rate must multiply. |
+| ggwave-like multi-tone | **Theory:** ~8–16 B/s vs ~8 bit/s. **PHYSICAL_RX:** ultrasound p3/p5 **0/5**; near-us-fast **5/5** @ ~3.2 bit/s — **keep binary**; see [`part3-ggwave-bench.md`](part3-ggwave-bench.md) |
 
 ---
 
@@ -243,3 +246,13 @@ Harness / metrics code:
 | Figures | `output/part3/figures/` |
 | Best candidate config | `configs/part3-best-candidate.yaml` |
 | Result tables | `output/part3/*.csv`, `best_candidate_sim.json` |
+| ggwave comparison | `docs/part3-ggwave-comparison.md` |
+| ggwave A/B bench | `docs/part3-ggwave-bench.md`, `scripts/part3/ggwave_physical_bench.py` |
+
+---
+
+## 10. ggwave comparison (spectral efficiency hypothesis)
+
+See [`docs/part3-ggwave-comparison.md`](part3-ggwave-comparison.md) and bench [`docs/part3-ggwave-bench.md`](part3-ggwave-bench.md).
+
+**PHYSICAL_RX (2026-08-06):** ggwave ultrasound protocols 3 and 5 — FER=1.0 (0/5 each); near-us-fast — FER=0 (5/5), payload goodput ≈ 3.2 bit/s. **Decision:** do not adopt ggwave / multi-tone rewrite for this near-US path; retain `near-us-fast`.

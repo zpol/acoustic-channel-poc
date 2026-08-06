@@ -1,0 +1,3 @@
+# Optional deps for Part 3 ggwave PHYSICAL_RX A/B bench only.
+# Not required for the main CPFSK stack.
+ggwave>=0.4.0

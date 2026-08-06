@@ -25,5 +25,6 @@ notes:
   - Faster than configs/near-us-recovery.yaml (0.25s + hamming74 ×2).
   - Prefer this for short synthetic payloads when the room/path matches the lab pair.
   - Fall back to near-us-recovery.yaml if FER rises (noisy room, distance, different hardware).
+  - live_monitor: plaintext after blind CRC; if CRC fails with hot mic peak, try --amplitude 0.18 (PHYSICAL_RX lab note).
   - Do not claim inaudibility; spectral leakage may still exist.
   - Recalibrate after hardware change.

@@ -1,14 +1,28 @@
 """Live terminal monitor for the acoustic receive path.
 
 Recording uses ``sounddevice.rec`` + ``wait`` on a background thread
-(no Python PortAudio callback). Mid-stream ``decode_from_samples`` is
-never run — it held the GIL and caused input overflows. Full decode
-runs once after capture completes.
+(no Python PortAudio callback). Mid-stream frame decode is intentionally
+not run (GIL / PortAudio overflows). During capture the UI shows mic
+energy and a guessed tone bit only — the recovered payload appears after
+a **blind CRC decode** of the full buffer (RX does not need prior knowledge
+of the plaintext).
+
+``--message`` is what the TX plays when ``--remote-tx`` / ``--self-tx`` is
+set. In listen-only mode it is unused for recovery (optional BER compare).
 
 Examples::
 
+    # One command on RX PC (SSH starts TX on the other host)
     python -m src.live_monitor --remote-tx demo-user@tx-host \\
-        --remote-output-device 1 --message DEMO-LAB-2027 --modulation cpfsk
+        --remote-output-device 0 --message HELLO --modulation cpfsk \\
+        --near-ultrasonic --frequency-zero 15000 --frequency-one 16000 \\
+        --symbol-duration 0.12 --repeats 1 --amplitude 0.30 --fec none
+
+    # Listen-only on RX (start transmitter separately on TX PC)
+    python -m src.live_monitor --input-device 0 --duration 80 \\
+        --modulation cpfsk --near-ultrasonic \\
+        --frequency-zero 15000 --frequency-one 16000 \\
+        --symbol-duration 0.12 --repeats 1 --min-ratio 1.08 --fec none
 """
 
 from __future__ import annotations
@@ -68,10 +82,27 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--frequency-one", type=float, default=7500.0)
     p.add_argument("--modulation", choices=("bfsk", "cpfsk"), default="cpfsk")
     p.add_argument("--fec", choices=("none", "hamming74"), default="none")
-    p.add_argument("--message", default="DEMO-LAB-2027")
+    p.add_argument(
+        "--message",
+        default="DEMO-LAB-2027",
+        help="Payload for TX when --remote-tx/--self-tx is set. "
+        "Not required for blind RX recovery (CRC extracts the text).",
+    )
+    p.add_argument(
+        "--compare-expected",
+        action="store_true",
+        help="Also compute BER vs --message after decode (does not affect CRC recovery).",
+    )
     p.add_argument("--amplitude", type=float, default=0.28)
     p.add_argument("--min-ratio", type=float, default=1.12)
     p.add_argument("--repeats", type=int, default=2, choices=(1, 2, 3))
+    p.add_argument(
+        "--inter-frame-silence",
+        type=float,
+        default=None,
+        help="Silence between repeated frames on TX. "
+        "Default 0.3; use 0.0 to match configs/near-us-fast.yaml.",
+    )
     p.add_argument("--self-tx", action="store_true")
     p.add_argument(
         "--remote-tx",
@@ -172,14 +203,18 @@ def _render(
             border_style="yellow",
         ),
         Panel(
-            f"[bold white]{recovered or '—'}[/bold white]",
+            f"[bold white]{recovered or '—'}[/bold white]\n"
+            "[dim]Plaintext appears after capture (blind CRC). "
+            "Live bit = tone energy only.[/dim]",
             title="RECOVERED MESSAGE",
             border_style="bright_white",
         ),
     )
 
 
-def _launch_remote_tx(args: argparse.Namespace, cfg: ModulationConfig) -> subprocess.Popen:
+def _launch_remote_tx(
+    args: argparse.Namespace, cfg: ModulationConfig, inter_frame_silence: float
+) -> subprocess.Popen:
     import shlex
 
     # Single-quote for the remote shell so $, !, etc. are not expanded (e.g. p4$$w0rd).
@@ -193,7 +228,8 @@ def _launch_remote_tx(args: argparse.Namespace, cfg: ModulationConfig) -> subpro
         f"--frequency-zero {cfg.frequency_zero} "
         f"--frequency-one {cfg.frequency_one} "
         f"--amplitude {args.amplitude} --repeats {args.repeats} "
-        f"--inter-frame-silence 0.3 --modulation {args.modulation} "
+        f"--inter-frame-silence {inter_frame_silence} "
+        f"--modulation {args.modulation} "
         f"--fec {args.fec}"
         + (" --near-ultrasonic" if args.near_ultrasonic else "")
     )
@@ -205,7 +241,9 @@ def _launch_remote_tx(args: argparse.Namespace, cfg: ModulationConfig) -> subpro
     )
 
 
-def _launch_local_tx(args: argparse.Namespace, cfg: ModulationConfig) -> subprocess.Popen:
+def _launch_local_tx(
+    args: argparse.Namespace, cfg: ModulationConfig, inter_frame_silence: float
+) -> subprocess.Popen:
     cmd = [
         sys.executable, "-m", "src.transmitter",
         "--message", args.message,
@@ -215,7 +253,7 @@ def _launch_local_tx(args: argparse.Namespace, cfg: ModulationConfig) -> subproc
         "--frequency-one", str(cfg.frequency_one),
         "--amplitude", str(args.amplitude),
         "--repeats", str(args.repeats),
-        "--inter-frame-silence", "0.3",
+        "--inter-frame-silence", str(inter_frame_silence),
         "--modulation", args.modulation,
         "--fec", args.fec,
     ]
@@ -247,19 +285,36 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 2
 
     auto_tx = bool(args.self_tx or args.remote_tx)
+    if args.inter_frame_silence is None:
+        # Match near-us-fast (0.0) when near-US + single frame; else legacy 0.3
+        if args.near_ultrasonic and args.repeats == 1:
+            inter_frame_silence = 0.0
+        else:
+            inter_frame_silence = 0.3
+    else:
+        inter_frame_silence = float(args.inter_frame_silence)
+
     if auto_tx:
         try:
             assert_playback_allowed(
                 config=cfg,
                 payload=args.message,
                 repeats=args.repeats,
-                inter_frame_silence=0.3,
+                inter_frame_silence=inter_frame_silence,
                 near_ultrasonic=bool(args.near_ultrasonic),
                 fec=args.fec,
             )
         except SafetyError as exc:
             console.print(f"[red]Safety rejection:[/red] {exc}")
             return 2
+    else:
+        console.print(
+            "[cyan]Listen-only:[/cyan] start TX on the other PC with matching "
+            "carriers/Tsym/FEC. RX recovers payload via CRC (blind) — "
+            "does not need the plaintext up front.\n"
+            "[yellow]During capture RECOVERED stays empty; wait for "
+            "'Capture done' + decode (can take ~1s CPU per 1s of audio).[/yellow]"
+        )
 
     try:
         import sounddevice as sd
@@ -270,7 +325,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if auto_tx:
         tx_dur = estimate_duration(
             args.message, cfg.symbol_duration,
-            repeats=args.repeats, inter_frame_silence=0.3, fec=args.fec,
+            repeats=args.repeats, inter_frame_silence=inter_frame_silence, fec=args.fec,
         )
         tail = args.tail_seconds
         if tail is None:
@@ -289,12 +344,16 @@ def main(argv: Optional[List[str]] = None) -> int:
             f"({args.repeats}× {args.modulation} fec={args.fec})\n"
             f"  RX: min_ratio={args.min_ratio} "
             f"freq_search=±{args.frequency_search_hz:.0f}Hz "
-            f"bandpass={'on' if args.bandpass else 'off'}"
+            f"bandpass={'on' if args.bandpass else 'off'} "
+            f"inter_frame_silence={inter_frame_silence}\n"
+            f"  [dim]UI shows tone energy live; plaintext after blind CRC decode.[/dim]"
         )
     else:
         duration = args.duration
         if args.frequency_search_hz is None:
             args.frequency_search_hz = 150.0 if args.near_ultrasonic else 0.0
+        if args.near_ultrasonic and args.min_ratio >= 1.12:
+            args.min_ratio = 1.08
 
     mode = "LIVE PHYSICAL CHANNEL"
     provenance = Provenance.PHYSICAL_RX.value
@@ -332,13 +391,17 @@ def main(argv: Optional[List[str]] = None) -> int:
     tx_started = False
     tx_err = ""
     status = "LISTENING"
-    notes = f"{provenance} | sd.rec thread (decode after capture)"
-    recovered = ""
-    crc = "—"
+    notes = f"{provenance} | energy live; CRC decode after capture"
+    recovered = "…"
+    crc = "pending"
     e0 = e1 = 0.0
     emax = 1e-6
     bit = "?"
-    expected = encode_message(args.message, fec=args.fec)
+    expected = (
+        encode_message(args.message, fec=args.fec)
+        if (args.compare_expected or auto_tx)
+        else None
+    )
     t0 = time.time()
     window = int(0.05 * cfg.sample_rate)
 
@@ -350,9 +413,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                     status = "TRANSMITTING"
                     notes = "TX started"
                     tx_proc = (
-                        _launch_remote_tx(args, cfg)
+                        _launch_remote_tx(args, cfg, inter_frame_silence)
                         if args.remote_tx
-                        else _launch_local_tx(args, cfg)
+                        else _launch_local_tx(args, cfg, inter_frame_silence)
                     )
                     tx_started = True
 
@@ -436,26 +499,34 @@ def main(argv: Optional[List[str]] = None) -> int:
     console.print(
         f"[cyan]Capture done:[/cyan] samples={len(full_audio)} "
         f"({len(full_audio)/cfg.sample_rate:.1f}s) "
-        f"peak={float(np.max(np.abs(full_audio))):.3f} — full decode…"
+        f"peak={float(np.max(np.abs(full_audio))):.3f}"
     )
     if tx_err:
         console.print(f"[red]TX diagnostics:[/red] {tx_err}")
 
+    est = max(8.0, 0.75 * len(full_audio) / cfg.sample_rate)
+    console.print(
+        f"[cyan]Blind CRC decode…[/cyan] "
+        f"RX does not need prior plaintext. "
+        f"Expect ~{est:.0f}s CPU on this buffer — do not Ctrl+C."
+    )
+    t_dec = time.time()
     stats, _, result = decode_from_samples(
         full_audio,
         cfg,
         min_energy=1e-6,
         min_ratio=args.min_ratio,
-        expected_bits=expected,
+        expected_bits=expected if args.compare_expected else None,
         fec=args.fec,
         sync_mode=args.sync_mode,
-        timing_steps=24,
+        timing_steps=16,
         apply_bandpass=bool(args.bandpass) and not args.no_bandpass,
         frequency_search_hz=float(args.frequency_search_hz or 0.0),
         frequency_search_step_hz=float(args.frequency_search_step_hz),
         symbol_duration_search_percent=3.0 if args.near_ultrasonic else 2.5,
-        symbol_duration_search_steps=7,
+        symbol_duration_search_steps=5,
     )
+    console.print(f"[dim]Decode wall time: {time.time() - t_dec:.1f}s[/dim]")
     if stats.frame_success and stats.recovered_message:
         recovered = stats.recovered_message
         crc = "CRC VALID"
@@ -468,7 +539,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     console.print(
         Panel(
             f"Recovered: {recovered!r}\nCRC: {crc}\nStatus: {status}\n"
-            f"Audio samples: {len(full_audio)}\nProvenance: {provenance}",
+            f"Audio samples: {len(full_audio)}\nProvenance: {provenance}\n"
+            f"Note: plaintext from frame+CRC (blind). "
+            f"--message only feeds TX / optional --compare-expected BER.",
             title="RESULT",
             border_style="green" if crc == "CRC VALID" else "red",
         )

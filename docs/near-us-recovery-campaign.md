@@ -82,11 +82,21 @@ Record each session under `experiments/` and copy a redacted summary to
 
 ### Fast profile (recommended when FER stays low)
 
+`live_monitor` shows tone energy live; the recovered plaintext appears **after** capture via **blind CRC decode** (RX does not need prior knowledge of the payload). Wait for the RESULT panel — do not Ctrl+C during “Blind CRC decode…”.
+
+Lab-validated command (PHYSICAL_RX, amp **0.18** worked for a 38 B synthetic payload when 0.30 hit CRC mismatch / hot peak):
+
 ```bash
+# On RX PC only — SSH starts TX. Placeholders: demo-user@tx-host, outdev 0.
 python -m src.live_monitor --remote-tx demo-user@tx-host \
-  --remote-output-device 0 --message HELLO --modulation cpfsk \
+  --remote-output-device 0 --input-device 0 \
+  --message HELLO --modulation cpfsk \
   --near-ultrasonic --frequency-zero 15000 --frequency-one 16000 \
-  --symbol-duration 0.12 --repeats 1 --amplitude 0.30 --fec none
+  --symbol-duration 0.12 --repeats 1 --amplitude 0.18 --fec none
 ```
 
-Config: [`configs/near-us-fast.yaml`](../configs/near-us-fast.yaml). Fall back to the 0.25 s + Hamming ×2 recovery profile if the path degrades.
+If CRC fails with peak ≫ 0.3, lower `--amplitude` (try 0.18) or speaker volume before raising FEC/repeats.
+
+Config: [`configs/near-us-fast.yaml`](../configs/near-us-fast.yaml) (YAML still lists amp 0.30 as the nominal profile). Fall back to the 0.25 s + Hamming ×2 recovery profile if the path degrades.
+
+See also ggwave ultrasound A/B (negative on this path): [`part3-ggwave-bench.md`](part3-ggwave-bench.md).

@@ -1,0 +1,61 @@
+A/B PHYSICAL_RX payload='HELLO' N=5 TX=demo-user@tx-host outdev=0 ggwave_protocols=[3, 5]
+
+=== ggwave ultrasound protocol=3 trial 0 ===
+PLAY_DONE
+success=0 recovered='' air=2.90s peak=0.248 err=no_decode
+
+=== ggwave ultrasound protocol=3 trial 1 ===
+PLAY_DONE
+success=0 recovered='' air=2.90s peak=0.014 err=no_decode
+
+=== ggwave ultrasound protocol=3 trial 2 ===
+PLAY_DONE
+success=0 recovered='' air=2.90s peak=0.014 err=no_decode
+
+=== ggwave ultrasound protocol=3 trial 3 ===
+PLAY_DONE
+success=0 recovered='' air=2.90s peak=0.014 err=no_decode
+
+=== ggwave ultrasound protocol=3 trial 4 ===
+PLAY_DONE
+success=0 recovered='' air=2.90s peak=0.014 err=no_decode
+
+=== ggwave ultrasound protocol=5 trial 0 ===
+PLAY_DONE
+success=0 recovered='' air=1.88s peak=0.015 err=no_decode
+
+=== ggwave ultrasound protocol=5 trial 1 ===
+PLAY_DONE
+success=0 recovered='' air=1.88s peak=0.014 err=no_decode
+
+=== ggwave ultrasound protocol=5 trial 2 ===
+PLAY_DONE
+success=0 recovered='' air=1.88s peak=0.014 err=no_decode
+
+=== ggwave ultrasound protocol=5 trial 3 ===
+PLAY_DONE
+success=0 recovered='' air=1.88s peak=0.014 err=no_decode
+
+=== ggwave ultrasound protocol=5 trial 4 ===
+PLAY_DONE
+success=0 recovered='' air=1.88s peak=0.014 err=no_decode
+
+=== near-us-fast trial 0 ===
+success=1 recovered='HELLO' air=12.48s peak=0.011 err=
+
+=== near-us-fast trial 1 ===
+success=1 recovered='HELLO' air=12.48s peak=0.918 err=
+
+=== near-us-fast trial 2 ===
+success=1 recovered='HELLO' air=12.48s peak=0.918 err=
+
+=== near-us-fast trial 3 ===
+success=1 recovered='HELLO' air=12.48s peak=0.918 err=
+
+=== near-us-fast trial 4 ===
+success=1 recovered='HELLO' air=12.48s peak=0.918 err=
+
+SUMMARY
+{'stack': 'ggwave_ultrasound_p3', 'n': 5, 'successes': 0, 'fer': 1.0, 'mean_airtime_s_all': 2.9013333333333335, 'mean_airtime_s_success': None, 'payload_goodput_bps': 0.0, 'payload': 'HELLO', 'provenance': 'PHYSICAL_RX'}
+{'stack': 'ggwave_ultrasound_p5', 'n': 5, 'successes': 0, 'fer': 1.0, 'mean_airtime_s_all': 1.8773333333333333, 'mean_airtime_s_success': None, 'payload_goodput_bps': 0.0, 'payload': 'HELLO', 'provenance': 'PHYSICAL_RX'}
+{'stack': 'near_us_fast', 'n': 5, 'successes': 5, 'fer': 0.0, 'mean_airtime_s_all': 12.48, 'mean_airtime_s_success': 12.48, 'payload_goodput_bps': 3.205128205128205, 'payload': 'HELLO', 'provenance': 'PHYSICAL_RX'}
